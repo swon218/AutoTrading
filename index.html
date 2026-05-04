@@ -1,0 +1,197 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoTrading - PC 대시보드</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <header class="h-14 bg-slate-800 border-b border-slate-700 flex items-center px-6 shrink-0">
+    <button id="sidebarToggle" type="button" class="sidebar-toggle-button" aria-label="좌측 메뉴 접기" aria-expanded="true">
+        <i class="fa-solid fa-bars" aria-hidden="true"></i>
+    </button>
+    <div class="w-64 flex items-center space-x-2 shrink-0">
+        <div class="w-9 h-8 bg-emerald-500 rounded flex items-center justify-center text-slate-900 font-bold text-sm tracking-tight">AT</div>
+        <span class="font-bold text-xl tracking-tight text-white">AutoTrading <span class="text-xs text-emerald-400 ml-1 border border-emerald-400 px-1 py-0.5 rounded">BETA</span></span>
+    </div>
+    
+    <div class="relative flex-1 max-w-sm mx-4">
+        <input id="searchBar" type="text" placeholder="종목명 또는 종목코드를 입력하세요" 
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 pr-10 text-sm text-white focus:outline-none focus:border-emerald-500">
+        <button id="searchClearButton" type="button" class="search-clear-button" aria-label="검색어 지우기" title="검색어 지우기">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+        
+        <div id="searchModal" class="search-modal">
+            <p class="text-xs text-slate-400 mb-2 font-bold">검색 결과</p>
+            <div id="searchResults" class="search-results">
+                <div class="search-empty">종목명 또는 종목코드를 입력하세요.</div>
+            </div>
+            <div class="mb-4">
+                <p class="text-xs text-slate-400 mb-2 font-bold">최근 검색</p>
+                <div class="flex flex-wrap gap-2">
+                    <span class="px-3 py-1 bg-slate-700 rounded-full text-xs text-slate-300">KODEX 미국S&P500</span>
+                    <span class="px-3 py-1 bg-slate-700 rounded-full text-xs text-slate-300">QQQ</span>
+                </div>
+            </div>
+            <div class="mb-4">
+                <p class="text-xs text-slate-400 mb-2 font-bold">인기 검색</p>
+                <div class="space-y-1">
+                    <div class="flex justify-between text-sm text-slate-300"><span>1 삼성전자</span><span class="text-blue-500">-0.92%</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex items-center space-x-6 ml-auto">
+        <div class="relative">
+            <button id="profileBtn" class="flex items-center space-x-2 focus:outline-none">
+                <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" class="w-8 h-8 rounded-full">
+                <span class="text-sm font-medium text-white">서재원 님</span>
+                <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+            </button>
+            <div id="profileMenu" class="hidden absolute right-0 mt-2 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
+                <a href="profile-edit.html" class="block px-4 py-3 text-sm text-slate-300 hover:bg-slate-700">회원정보 수정</a>
+                <a href="#" class="block px-4 py-3 text-sm text-red-400 hover:bg-slate-700 border-t border-slate-700">로그아웃</a>
+            </div>
+        </div>
+    </div>
+</header>
+
+    <div class="app-content flex flex-1 overflow-hidden">
+       
+        <aside id="appSidebar" class="app-sidebar w-16 md:w-64 bg-slate-800 border-r border-slate-700 flex flex-col justify-between shrink-0 transition-all duration-300">
+            <nav class="p-4 space-y-2">
+                <a href="#" class="flex items-center space-x-3 text-emerald-400 bg-slate-700/50 p-3 rounded-lg transition-colors">
+                    <i class="fa-solid fa-chart-line text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">트레이딩 대시보드</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
+                    <i class="fa-solid fa-robot text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">자동매매 전략설정</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
+                    <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">매매 이력</span>
+                </a>
+            </nav>
+            <div class="p-4">
+                <a href="#" class="flex items-center space-x-3 text-slate-400 hover:text-white p-3 transition-colors">
+                    <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">시스템 설정</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="app-main flex-1 overflow-hidden">
+            <div class="main_m">
+           
+            <section class="main_a">
+                <div>
+                    <h1 class="text-2xl font-bold flex items-center space-x-2">
+                        <span id="stockName">-</span>
+                        <span id="stockCode" class="text-sm font-normal text-slate-400 border border-slate-600 px-2 py-0.5 rounded">-</span>
+                        <span id="serverConnectionStatus" class="server-connection-status is-disconnected">
+                            <span class="server-connection-dot" aria-hidden="true"></span>
+                            <span id="serverConnectionText">정규장종료</span>
+                        </span>
+                    </h1>
+                    <div class="main_quote_row">
+                        <span id="stockPrice" class="text-3xl font-bold text-slate-300">-</span>
+                        <span id="stockChange" class="text-lg font-medium text-slate-300">-</span>
+                    </div>
+                </div>
+                <div class="main_quote_metrics">
+                    <div class="flex flex-col"><span class="text-slate-400">고가</span><span id="stockHigh" class="text-slate-300">-</span></div>
+                    <div class="flex flex-col"><span class="text-slate-400">저가</span><span id="stockLow" class="text-slate-300">-</span></div>
+                    <div class="flex flex-col"><span class="text-slate-400">거래량</span><span id="stockVolume">-</span></div>
+                </div>
+            </section>
+
+            <section class="main_b panel">
+                <div class="h-10 border-b border-slate-700 flex items-center px-4 space-x-4 text-sm shrink-0">
+                    <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="1">1분</button>
+                    <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="5">5분</button>
+                    <button class="chart-interval-btn text-emerald-400 font-medium border-b-2 border-emerald-400 py-2" data-interval="15">15분</button>
+                    <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="60">1시간</button>
+                    <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="120">2시간</button>
+                    <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="day">일봉</button>
+                    <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="week">주봉</button>
+                    <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="month">월봉</button>
+                    <div class="flex-1"></div>
+                    <button class="text-slate-400 hover:text-white"><i class="fa-solid fa-expand"></i></button>
+                </div>
+               
+                <div class="chart_area">
+                    <canvas id="stockChart"></canvas>
+                    <div class="chart-zoom-controls" aria-label="차트 확대 축소">
+                        <button id="chartZoomIn" type="button" title="차트 확대">+</button>
+                        <button id="chartZoomOut" type="button" title="차트 축소">-</button>
+                    </div>
+                    <div id="chartStatus" class="chart-status">종목을 검색하면 차트가 표시됩니다.</div>
+                </div>
+                    
+            </section>
+            </div>
+
+        </main>
+
+        <aside class="indicator-sidebar flex flex-col p-4 pl-0 space-y-4 shrink-0 overflow-y-auto">
+           
+            <div class="panel flex flex-col flex-1 min-h-0">
+                <div class="p-3 border-b border-slate-700 flex justify-between items-center bg-slate-800/50 rounded-t-lg">
+                    <h2 class="font-bold flex items-center"><i class="fa-solid fa-bolt text-emerald-400 mr-2"></i>지표 설정</h2>
+                    <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+                        <input type="checkbox" name="toggle" id="toggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-emerald-500 right-0" checked/>
+                        <label for="toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-emerald-500 cursor-pointer"></label>
+                    </div>
+                </div>
+               
+                <div class="indicator-strategy-body">
+                    <div class="indicator-strategy-toolbar">
+                        <span class="indicator-section-title">지표 설정</span>
+                        <select id="savedStrategySelect" class="indicator-preset-select" aria-label="저장한 지표 설정 불러오기">
+                            <option value="">저장한 전략 불러오기</option>
+                        </select>
+                    </div>
+
+                    <div class="indicator-strategy-divider"></div>
+
+                    <div class="indicator-name-field">
+                        <label for="strategyNameInput">전략 이름</label>
+                        <input id="strategyNameInput" type="text" placeholder="전략 이름을 입력하세요">
+                        <p id="strategyNameMessage" class="indicator-message" aria-live="polite"></p>
+                    </div>
+
+                    <div class="indicator-search-wrap">
+                        <div class="indicator-search-box">
+                            <input id="indicatorSearchInput" type="text" placeholder="보조지표 검색" class="indicator-search-input"
+                                autocomplete="off">
+                            <div id="indicatorSearchDropdown" class="indicator-search-dropdown hidden"></div>
+                        </div>
+                        <button id="indicatorAddButton" type="button" class="indicator-add-button">추가</button>
+                    </div>
+
+                    <div id="indicatorCards" class="indicator-card-list"></div>
+
+                    <div class="indicator-strategy-actions">
+                        <button id="indicatorResetButton" type="button" class="indicator-reset-button">초기화</button>
+                        <button id="indicatorSaveButton" type="button" class="indicator-save-button">저장</button>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
