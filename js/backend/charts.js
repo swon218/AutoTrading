@@ -40,44 +40,54 @@ function getChartItems(payload, interval) {
     return payload.stk_min_pole_chart_qry || payload.list || [];
 }
 
-function aggregateCandles(candles, groupSize) {
-    const aggregated = [];
-    let group = [];
+function getIntradayBucketTime(time, intervalMinutes) {
+    const match = String(time || '').match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return time;
 
-    const flushGroup = () => {
-        if (!group.length) return;
-        aggregated.push({
-            time: group[0].time,
-            open: group[0].open,
-            high: Math.max(...group.map((candle) => candle.high)),
-            low: Math.min(...group.map((candle) => candle.low)),
-            close: group[group.length - 1].close,
-            volume: group.reduce((sum, candle) => sum + (candle.volume || 0), 0),
-        });
-        group = [];
-    };
+    const [, datePart, hourText, minuteText] = match;
+    const minutes = Number(hourText) * 60 + Number(minuteText);
+    const marketOpenMinutes = 9 * 60;
+    const elapsedMinutes = Math.max(0, minutes - marketOpenMinutes);
+    const bucketStartMinutes = marketOpenMinutes + Math.floor(elapsedMinutes / intervalMinutes) * intervalMinutes;
+    const bucketHour = String(Math.floor(bucketStartMinutes / 60)).padStart(2, '0');
+    const bucketMinute = String(bucketStartMinutes % 60).padStart(2, '0');
+
+    return `${datePart}T${bucketHour}:${bucketMinute}:00+09:00`;
+}
+
+function aggregateIntradayCandles(candles, intervalMinutes) {
+    const buckets = new Map();
 
     for (const candle of candles) {
-        if (group.length && group[0].time.slice(0, 10) !== candle.time.slice(0, 10)) {
-            flushGroup();
+        const bucketTime = getIntradayBucketTime(candle.time, intervalMinutes);
+        const bucket = buckets.get(bucketTime);
+
+        if (!bucket) {
+            buckets.set(bucketTime, {
+                time: bucketTime,
+                open: candle.open,
+                high: candle.high,
+                low: candle.low,
+                close: candle.close,
+                volume: candle.volume || 0,
+            });
+            continue;
         }
 
-        group.push(candle);
-
-        if (group.length === groupSize) {
-            flushGroup();
-        }
+        bucket.high = Math.max(bucket.high, candle.high);
+        bucket.low = Math.min(bucket.low, candle.low);
+        bucket.close = candle.close;
+        bucket.volume += candle.volume || 0;
     }
 
-    flushGroup();
-
-    return aggregated;
+    return Array.from(buckets.values());
 }
 
 async function getChartData(query, interval = '1') {
     const code = await resolveStockCode(query);
     const normalizedInterval = ['1', '5', '15', '60', '120', 'day', 'week', 'month'].includes(interval) ? interval : '1';
-    const requestInterval = normalizedInterval === '120' ? '60' : normalizedInterval;
+    const requestInterval = ['60', '120'].includes(normalizedInterval) ? '15' : normalizedInterval;
+    const aggregateMinutes = ['60', '120'].includes(normalizedInterval) ? Number(normalizedInterval) : null;
     const cacheKey = `${code}:${normalizedInterval}`;
     const cached = chartCache.get(cacheKey);
     const now = Date.now();
@@ -105,7 +115,7 @@ async function getChartData(query, interval = '1') {
         })
         .reverse();
 
-    const candles = (normalizedInterval === '120' ? aggregateCandles(rawCandles, 2) : rawCandles)
+    const candles = (aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles)
         .slice(-180);
 
     const data = {

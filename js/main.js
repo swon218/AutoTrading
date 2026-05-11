@@ -129,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_CHART_INTERVAL = '15';
     let currentChartInterval = DEFAULT_CHART_INTERVAL;
     let latestCandles = [];
+    let latestCandlesInterval = null;
     let visibleCandleCount = 90;
     let chartStartIndex = 0;
     let chartRequestId = 0;
@@ -1563,7 +1564,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return compact ? time.slice(5, 16).replace('T', ' ') : time.slice(0, 16).replace('T', ' ');
     };
 
-    const fetchChart = async (code = currentStockCode) => {
+    const fetchChart = async (code = currentStockCode, interval = currentChartInterval) => {
+        const requestInterval = interval || DEFAULT_CHART_INTERVAL;
         if (!code) {
             chartRequestId += 1;
             if (chartRetryTimer) {
@@ -1571,6 +1573,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 chartRetryTimer = null;
             }
             latestCandles = [];
+            latestCandlesInterval = null;
             setTodayChartCandleStatus(false);
             redrawLatestChart();
             return;
@@ -1578,6 +1581,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const requestId = chartRequestId + 1;
         chartRequestId = requestId;
+        const shouldRetryChart = isRegularMarketTime();
+        if (latestCandlesInterval !== requestInterval) {
+            latestCandles = [];
+            latestCandlesInterval = null;
+            chartStartIndex = 0;
+            chartHoverPoint = null;
+            redrawLatestChart();
+        }
         if (chartRetryTimer) {
             clearTimeout(chartRetryTimer);
             chartRetryTimer = null;
@@ -1588,15 +1599,19 @@ document.addEventListener('DOMContentLoaded', () => {
             setChartStatus(message);
             chartRetryTimer = setTimeout(() => {
                 chartRetryTimer = null;
-                if (currentStockCode === code && currentChartInterval) {
-                    fetchChart(code);
+                if (currentStockCode === code && currentChartInterval === requestInterval) {
+                    fetchChart(code, requestInterval);
                 }
             }, 5000);
         };
 
         try {
-            setChartStatus('차트 데이터를 불러오는 중...');
-            const response = await fetch(`/api/chart/${encodeURIComponent(code)}?interval=${encodeURIComponent(currentChartInterval)}`, {
+            if (shouldRetryChart) {
+                setChartStatus('차트 데이터를 불러오는 중...');
+            } else {
+                setChartStatus('');
+            }
+            const response = await fetch(`/api/chart/${encodeURIComponent(code)}?interval=${encodeURIComponent(requestInterval)}`, {
                 cache: 'no-store',
             });
 
@@ -1610,6 +1625,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const nextCandles = payload.candles || [];
             if (!nextCandles.length) {
+                if (!shouldRetryChart) {
+                    if (latestCandlesInterval !== requestInterval) {
+                        latestCandles = [];
+                        latestCandlesInterval = null;
+                        setTodayChartCandleStatus(false);
+                        redrawLatestChart();
+                    }
+                    return;
+                }
+
                 if (latestCandles.length) {
                     scheduleChartRetry('차트 데이터가 잠시 비어 있어 기존 차트를 유지합니다. 다시 확인 중...');
                     return;
@@ -1619,6 +1644,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             latestCandles = nextCandles;
+            latestCandlesInterval = requestInterval;
             setTodayChartCandleStatus(hasTodayCandle(latestCandles));
             visibleCandleCount = Math.min(Math.max(60, visibleCandleCount), Math.max(60, latestCandles.length));
             snapChartToLatest();
@@ -1626,6 +1652,16 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             if (requestId !== chartRequestId) return;
             console.error('Chart request failed.', error);
+            if (!shouldRetryChart) {
+                if (latestCandlesInterval !== requestInterval) {
+                    latestCandles = [];
+                    latestCandlesInterval = null;
+                    setTodayChartCandleStatus(false);
+                    redrawLatestChart();
+                }
+                return;
+            }
+
             if (latestCandles.length) {
                 scheduleChartRetry('차트 요청이 잠시 실패해 기존 차트를 유지합니다. 다시 확인 중...');
                 return;
@@ -1979,7 +2015,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentChartInterval = button.dataset.interval || '1';
             setActiveIntervalButton();
             updateChartUrl(currentStockCode);
-            fetchChart(currentStockCode);
+            fetchChart(currentStockCode, currentChartInterval);
             if (currentStockCode) {
                 startRealtime(currentStockCode);
             }
