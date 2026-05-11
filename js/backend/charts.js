@@ -114,10 +114,14 @@ async function getChartData(query, interval = '1') {
         candles,
     };
 
-    chartCache.set(cacheKey, {
-        data,
-        expiresAt: now + 30 * 1000,
-    });
+    if (candles.length) {
+        chartCache.set(cacheKey, {
+            data,
+            expiresAt: now + 30 * 1000,
+        });
+    } else {
+        chartCache.delete(cacheKey);
+    }
 
     return data;
 }

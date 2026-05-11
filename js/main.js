@@ -101,6 +101,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const indicatorCards = document.getElementById('indicatorCards');
     const indicatorResetButton = document.getElementById('indicatorResetButton');
     const indicatorSaveButton = document.getElementById('indicatorSaveButton');
+    const rightPanelTabs = document.querySelectorAll('[data-panel-tab]');
+    const indicatorPanel = document.getElementById('indicatorPanel');
+    const orderPanel = document.getElementById('orderPanel');
+    const orderForm = document.getElementById('orderForm');
+    const orderActionButtons = document.querySelectorAll('[data-order-action]');
+    const orderPriceButtons = document.querySelectorAll('[data-price-mode]');
+    const orderPriceStepButtons = document.querySelectorAll('.order-price-step-button');
+    const orderPriceInput = document.getElementById('orderPriceInput');
+    const orderQuantityInput = document.getElementById('orderQuantityInput');
+    const orderTotalInput = document.getElementById('orderTotalInput');
+    const orderAvailableAmount = document.getElementById('orderAvailableAmount');
+    const orderHoldingRow = document.getElementById('orderHoldingRow');
+    const orderHoldingPrice = document.getElementById('orderHoldingPrice');
+    const orderHoldingQuantity = document.getElementById('orderHoldingQuantity');
+    const pendingOrdersPanel = document.getElementById('pendingOrdersPanel');
+    const pendingOrdersList = document.getElementById('pendingOrdersList');
+    const orderMessage = document.getElementById('orderMessage');
+    const orderSubmitButton = document.getElementById('orderSubmitButton');
 
     let currentStockCode = '';
     let refreshTimer = null;
@@ -113,6 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let latestCandles = [];
     let visibleCandleCount = 90;
     let chartStartIndex = 0;
+    let chartRequestId = 0;
+    let chartRetryTimer = null;
     let isChartDragging = false;
     let isPriceScaleDragging = false;
     let chartDragStartX = 0;
@@ -124,9 +144,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let chartRedrawFrame = null;
     let realtimeSource = null;
     let marketSessionTimer = null;
+    let apiHealthTimer = null;
+    let isApiServerAvailable = true;
     let hasTodayChartCandle = false;
     let activeIndicators = [];
     let savedIndicatorStrategies = [];
+    let currentOrderAction = 'buy';
+    let currentOrderPriceMode = 'limit';
+    let latestStockPrice = 0;
+    let orderMessageTimer = null;
+    let hasUserEditedOrderPrice = false;
+    let orderableCashTimer = null;
+    let pendingOrdersTimer = null;
+    let latestSellableQuantity = 0;
+    let holdingRequestId = 0;
 
     const formatNumber = (value) => {
         if (value === null || value === undefined || Number.isNaN(Number(value))) {
@@ -142,6 +173,603 @@ document.addEventListener('DOMContentLoaded', () => {
             values: Object.fromEntries(definition.fields.map((field) => [field.key, field.value])),
         };
     };
+
+    const setRightPanel = (panelName = 'indicator') => {
+        const isOrderPanel = panelName === 'order';
+
+        indicatorPanel?.classList.toggle('hidden', isOrderPanel);
+        orderPanel?.classList.toggle('hidden', !isOrderPanel);
+
+        rightPanelTabs.forEach((button) => {
+            const isActive = button.dataset.panelTab === panelName;
+            button.classList.toggle('is-active', isActive);
+            button.setAttribute('aria-selected', String(isActive));
+        });
+
+        if (isOrderPanel) {
+            fetchOrderableCash();
+        }
+    };
+
+    rightPanelTabs.forEach((button) => {
+        button.addEventListener('click', () => {
+            setRightPanel(button.dataset.panelTab);
+        });
+    });
+
+    const parseOrderNumber = (value) => {
+        const normalized = String(value || '').replace(/[^\d]/g, '');
+        return normalized ? Number(normalized) : 0;
+    };
+
+    const formatOrderInputValue = (input) => {
+        if (!input) return;
+        const value = parseOrderNumber(input.value);
+        input.value = value ? formatNumber(value) : '';
+    };
+
+    const sanitizeOrderNumberInput = (input) => {
+        if (!input) return;
+        const cursor = input.selectionStart ?? input.value.length;
+        const digitsBeforeCursor = input.value.slice(0, cursor).replace(/[^\d]/g, '').length;
+        const digits = input.value.replace(/[^\d]/g, '');
+        if (input.value === digits) return;
+
+        input.value = digits;
+        let nextCursor = input.value.length;
+        let digitCount = 0;
+        for (let index = 0; index < input.value.length; index += 1) {
+            digitCount += 1;
+            if (digitCount >= digitsBeforeCursor) {
+                nextCursor = index + 1;
+                break;
+            }
+        }
+        input.setSelectionRange(nextCursor, nextCursor);
+    };
+
+    const allowOnlyOrderDigits = (event) => {
+        if (event.inputType?.startsWith('delete')) return;
+        if (event.data && /\D/.test(event.data)) {
+            event.preventDefault();
+        }
+    };
+
+    const escapeHtml = (value) => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const getOrderPriceStepFor = (price) => {
+        if (price < 2000) return 1;
+        if (price < 5000) return 5;
+        if (price < 20000) return 10;
+        if (price < 50000) return 50;
+        if (price < 200000) return 100;
+        if (price < 500000) return 500;
+        return 1000;
+    };
+
+    const getOrderPriceStep = () => {
+        const price = parseOrderNumber(orderPriceInput?.value) || latestStockPrice || 0;
+        return getOrderPriceStepFor(price);
+    };
+
+    const isRegularOrderTime = () => {
+        const now = new Date();
+        const seoulParts = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Asia/Seoul',
+            weekday: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+        }).formatToParts(now);
+        const parts = Object.fromEntries(seoulParts.map((part) => [part.type, part.value]));
+        if (['Sat', 'Sun'].includes(parts.weekday)) return false;
+
+        const minutes = Number(parts.hour) * 60 + Number(parts.minute);
+        return minutes >= 9 * 60 && minutes <= 15 * 60 + 30;
+    };
+
+    const setOrderMessage = (message = '', type = '', options = {}) => {
+        if (!orderMessage) return;
+        if (orderMessageTimer) {
+            clearTimeout(orderMessageTimer);
+            orderMessageTimer = null;
+        }
+        orderMessage.textContent = message;
+        orderMessage.classList.toggle('is-error', type === 'error');
+        orderMessage.classList.toggle('is-success', type === 'success');
+        if (message && options.autoHide) {
+            orderMessageTimer = setTimeout(() => {
+                setOrderMessage('');
+            }, options.autoHide);
+        }
+    };
+
+    const renderPendingOrders = (orders = []) => {
+        if (!pendingOrdersList) return;
+        if (!orders.length) {
+            pendingOrdersList.innerHTML = '<div class="pending-order-empty">미체결 내역이 없습니다.</div>';
+            return;
+        }
+
+        pendingOrdersList.innerHTML = orders.map((order) => {
+            const sideClass = order.side === 'sell' ? 'is-sell' : 'is-buy';
+            const orderNo = escapeHtml(order.orderNo);
+            const stockCode = escapeHtml(order.stockCode);
+            const exchange = escapeHtml(order.exchange || 'SOR');
+            return `
+                <article class="pending-order-card ${sideClass}" data-order-no="${orderNo}" data-stock-code="${stockCode}" data-exchange="${exchange}">
+                    <div class="pending-order-header">
+                        <span class="pending-order-side">${escapeHtml(order.sideLabel)}</span>
+                        <strong class="pending-order-name">${escapeHtml(order.stockName)}</strong>
+                        <span class="pending-order-number">#${orderNo}</span>
+                    </div>
+                    <div class="pending-order-meta">
+                        <span>주문가<strong>${formatNumber(order.orderPrice)}원</strong></span>
+                        <span>미체결<strong>${formatNumber(order.pendingQuantity)}주</strong></span>
+                        <span>상태<strong>${escapeHtml(order.orderStatus || '접수')}</strong></span>
+                    </div>
+                    <div class="pending-order-edit">
+                        <div class="pending-order-stepper">
+                            <input type="text" inputmode="numeric" value="${formatNumber(order.orderPrice)}" aria-label="정정 주문 가격" data-pending-price>
+                            <button type="button" data-pending-step-target="price" data-step="-1" aria-label="정정 가격 감소">-</button>
+                            <button type="button" data-pending-step-target="price" data-step="1" aria-label="정정 가격 증가">+</button>
+                        </div>
+                        <div class="pending-order-stepper">
+                            <input type="text" inputmode="numeric" value="${formatNumber(order.pendingQuantity)}" aria-label="정정 주문 수량" data-pending-quantity>
+                            <button type="button" data-pending-step-target="quantity" data-step="-1" aria-label="정정 수량 감소">-</button>
+                            <button type="button" data-pending-step-target="quantity" data-step="1" aria-label="정정 수량 증가">+</button>
+                        </div>
+                        <div class="pending-order-actions">
+                            <button type="button" data-modify-pending-order>정정</button>
+                            <button type="button" data-cancel-pending-order>취소</button>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    };
+
+    const fetchPendingOrders = async () => {
+        if (!pendingOrdersList) return;
+        if (pendingOrdersTimer) {
+            clearTimeout(pendingOrdersTimer);
+            pendingOrdersTimer = null;
+        }
+
+        const activeElement = document.activeElement;
+        const isEditingPendingOrder = activeElement?.matches?.('[data-pending-price], [data-pending-quantity]');
+        if (isEditingPendingOrder) {
+            pendingOrdersTimer = setTimeout(fetchPendingOrders, 10000);
+            return;
+        }
+
+        try {
+            if (!currentStockCode) {
+                renderPendingOrders([]);
+                return;
+            }
+            const response = await fetch(`/api/orders/pending?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            renderPendingOrders(payload.orders || []);
+        } catch (error) {
+            console.error('Pending order request failed.', error);
+            pendingOrdersList.innerHTML = '<div class="pending-order-empty">미체결 내역을 조회하지 못했습니다.</div>';
+        }
+
+        if (currentOrderAction === 'pending') {
+            pendingOrdersTimer = setTimeout(fetchPendingOrders, 10000);
+        }
+    };
+
+    const updateOrderTotal = () => {
+        if (!orderTotalInput) return;
+        const quantity = parseOrderNumber(orderQuantityInput?.value);
+        const price = parseOrderNumber(orderPriceInput?.value) || latestStockPrice;
+        const total = quantity && price ? quantity * price : 0;
+        orderTotalInput.value = total ? formatNumber(total) : '';
+    };
+
+    const setOrderableCashText = (text, isError = false) => {
+        if (!orderAvailableAmount) return;
+        orderAvailableAmount.value = text;
+        orderAvailableAmount.classList.toggle('is-error', isError);
+    };
+
+    const setHoldingSummary = ({ priceText = '', quantityText = '', isError = false } = {}) => {
+        if (orderHoldingPrice) {
+            orderHoldingPrice.value = priceText;
+        }
+        if (orderHoldingQuantity) {
+            orderHoldingQuantity.value = quantityText;
+        }
+        orderHoldingRow?.querySelector('.order-holding-summary')?.classList.toggle('is-error', isError);
+    };
+
+    const clampSellQuantityInput = () => {
+        if (!orderQuantityInput || currentOrderAction !== 'sell' || latestSellableQuantity <= 0) return;
+        const quantity = parseOrderNumber(orderQuantityInput.value);
+        if (quantity > latestSellableQuantity) {
+            orderQuantityInput.value = formatNumber(latestSellableQuantity);
+            setOrderMessage(`매도 가능 수량은 ${formatNumber(latestSellableQuantity)}주입니다.`, 'error');
+        }
+    };
+
+    const setSellableQuantity = ({ orderableQuantity = 0, holdingQuantity = 0, currentPrice = 0 } = {}) => {
+        latestSellableQuantity = Math.max(0, Number(orderableQuantity || holdingQuantity) || 0);
+        const displayPrice = Number(currentPrice) || latestStockPrice || 0;
+        const displayQuantity = Number(holdingQuantity || orderableQuantity) || 0;
+        setHoldingSummary({
+            priceText: displayPrice ? `${formatNumber(displayPrice)}원` : '-',
+            quantityText: `${formatNumber(displayQuantity)}주`,
+        });
+        clampSellQuantityInput();
+    };
+
+    const resetSellableQuantity = (message = '종목 선택 후 조회', isError = false) => {
+        holdingRequestId += 1;
+        latestSellableQuantity = 0;
+        setHoldingSummary({
+            priceText: message,
+            quantityText: message,
+            isError,
+        });
+    };
+
+    const fetchStockHolding = async () => {
+        if (!orderHoldingRow || currentOrderAction !== 'sell') return;
+        const requestId = holdingRequestId + 1;
+        holdingRequestId = requestId;
+
+        if (!currentStockCode) {
+            resetSellableQuantity('종목 선택 후 조회');
+            return;
+        }
+
+        setHoldingSummary({ priceText: '조회 중...', quantityText: '조회 중...' });
+        try {
+            const response = await fetch(`/api/account/holding?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (requestId !== holdingRequestId) return;
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+
+            setSellableQuantity({
+                orderableQuantity: Number(payload.orderableQuantity ?? payload.quantity) || 0,
+                holdingQuantity: Number(payload.holdingQuantity ?? payload.quantity) || 0,
+                currentPrice: Number(payload.currentPrice) || 0,
+            });
+        } catch (error) {
+            if (requestId !== holdingRequestId) return;
+            console.error('Account holding request failed.', error);
+            resetSellableQuantity('보유 수량 조회 실패', true);
+        }
+    };
+
+    const fetchOrderableCash = async () => {
+        if (!orderAvailableAmount) return;
+        if (orderableCashTimer) {
+            clearTimeout(orderableCashTimer);
+        }
+
+        if (!isApiServerAvailable) {
+            setOrderableCashText('계좌 조회 실패', true);
+            orderableCashTimer = setTimeout(fetchOrderableCash, 60000);
+            return;
+        }
+
+        setOrderableCashText('조회 중...');
+        try {
+            const response = await fetch('/api/account/orderable-cash', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+
+            const amount = Number(payload.orderableAmount) || 0;
+            setOrderableCashText(`${formatNumber(amount)}원`);
+        } catch (error) {
+            console.error('Account cash request failed.', error);
+            setOrderableCashText('계좌 조회 실패', true);
+        }
+
+        orderableCashTimer = setTimeout(fetchOrderableCash, 60000);
+    };
+
+    const updateOrderSubmitLabel = () => {
+        if (!orderSubmitButton) return;
+        const label = currentOrderAction === 'sell' ? '매도' : currentOrderAction === 'pending' ? '대기' : '매수';
+        orderSubmitButton.textContent = `${label} 주문하기`;
+        orderSubmitButton.classList.toggle('is-sell', currentOrderAction === 'sell');
+        orderSubmitButton.disabled = currentOrderAction === 'pending';
+    };
+
+    const setOrderAction = (action) => {
+        currentOrderAction = ['buy', 'sell', 'pending'].includes(action) ? action : 'buy';
+        orderActionButtons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.orderAction === currentOrderAction);
+        });
+        const isPending = currentOrderAction === 'pending';
+        document.querySelectorAll('.order-trade-section').forEach((element) => {
+            element.classList.toggle('hidden', isPending);
+        });
+        orderHoldingRow?.classList.toggle('hidden', isPending || currentOrderAction !== 'sell');
+        pendingOrdersPanel?.classList.toggle('hidden', !isPending);
+        if (isPending) {
+            setOrderMessage('');
+            fetchPendingOrders();
+        } else if (pendingOrdersTimer) {
+            clearTimeout(pendingOrdersTimer);
+            pendingOrdersTimer = null;
+        }
+        if (currentOrderAction === 'sell') {
+            fetchStockHolding();
+        } else {
+            resetSellableQuantity();
+        }
+        updateOrderSubmitLabel();
+    };
+
+    const setOrderPriceMode = (mode) => {
+        const previousMode = currentOrderPriceMode;
+        currentOrderPriceMode = mode === 'market' ? 'market' : 'limit';
+        orderPriceButtons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.priceMode === currentOrderPriceMode);
+        });
+
+        if (orderPriceInput) {
+            orderPriceInput.disabled = currentOrderPriceMode === 'market';
+            orderPriceInput.placeholder = currentOrderPriceMode === 'market' ? '현재가 기준' : '가격 입력';
+            if (latestStockPrice && (currentOrderPriceMode === 'market' || previousMode !== currentOrderPriceMode)) {
+                orderPriceInput.value = formatNumber(latestStockPrice);
+                hasUserEditedOrderPrice = false;
+            }
+        }
+        orderPriceStepButtons.forEach((button) => {
+            button.classList.toggle('hidden', currentOrderPriceMode === 'market');
+        });
+        updateOrderTotal();
+    };
+
+    const updateOrderFromQuote = (price) => {
+        latestStockPrice = Number(price) || latestStockPrice || 0;
+        const shouldUpdateOrderPrice = currentOrderPriceMode === 'market'
+            || (!parseOrderNumber(orderPriceInput?.value) && !hasUserEditedOrderPrice);
+        if (orderPriceInput && latestStockPrice && shouldUpdateOrderPrice) {
+            orderPriceInput.value = formatNumber(latestStockPrice);
+        }
+        updateOrderTotal();
+    };
+
+    const changeOrderInputValue = (target, delta) => {
+        const input = target === 'quantity' ? orderQuantityInput : orderPriceInput;
+        if (!input || input.disabled) return;
+        const step = target === 'quantity' ? 1 : getOrderPriceStep();
+        let nextValue = Math.max(0, parseOrderNumber(input.value) + (Number(delta) || 0) * step);
+        if (target === 'quantity' && currentOrderAction === 'sell' && latestSellableQuantity > 0) {
+            nextValue = Math.min(nextValue, latestSellableQuantity);
+        }
+        input.value = nextValue ? formatNumber(nextValue) : '';
+        if (target === 'price') {
+            hasUserEditedOrderPrice = true;
+        }
+        updateOrderTotal();
+    };
+
+    const submitStockOrder = async () => {
+        if (currentOrderAction === 'pending') {
+            setOrderMessage('대기 주문은 아직 주문 전송 대상이 아닙니다.', 'error');
+            return;
+        }
+
+        const quantity = parseOrderNumber(orderQuantityInput?.value);
+        const price = currentOrderPriceMode === 'market' ? 0 : parseOrderNumber(orderPriceInput?.value);
+        if (!currentStockCode) {
+            setOrderMessage('먼저 종목을 검색해서 선택하세요.', 'error');
+            return;
+        }
+        if (!quantity) {
+            setOrderMessage('주문 수량을 입력하세요.', 'error');
+            return;
+        }
+        if (currentOrderAction === 'sell' && latestSellableQuantity <= 0) {
+            setOrderMessage('매도 가능한 보유 수량이 없습니다.', 'error');
+            return;
+        }
+        if (currentOrderAction === 'sell' && quantity > latestSellableQuantity) {
+            setOrderMessage(`매도 가능 수량은 ${formatNumber(latestSellableQuantity)}주입니다.`, 'error');
+            return;
+        }
+        if (currentOrderPriceMode === 'limit' && !price) {
+            setOrderMessage('지정가 주문 가격을 입력하세요.', 'error');
+            return;
+        }
+        if (!isRegularOrderTime()) {
+            setOrderMessage('현재는 정규장 시간이 아닙니다. 정규장(09:00~15:30)에만 주문할 수 있습니다.', 'error');
+            return;
+        }
+
+        orderSubmitButton.disabled = true;
+        setOrderMessage('주문을 전송하는 중입니다...');
+
+        try {
+            const response = await fetch('/api/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: currentOrderAction,
+                    stockCode: currentStockCode,
+                    priceMode: currentOrderPriceMode,
+                    price,
+                    quantity,
+                }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+
+            const orderNo = payload.orderNo ? ` 주문번호 ${payload.orderNo}` : '';
+            const doneText = currentOrderAction === 'sell' ? '매도 주문완료' : '매수 주문완료';
+            setOrderMessage(`${doneText}${orderNo}`, 'success', { autoHide: 4000 });
+            fetchOrderableCash();
+            if (currentOrderAction === 'sell') fetchStockHolding();
+        } catch (error) {
+            setOrderMessage(error.message || '주문 전송에 실패했습니다.', 'error');
+        } finally {
+            updateOrderSubmitLabel();
+        }
+    };
+
+    orderActionButtons.forEach((button) => {
+        button.addEventListener('click', () => setOrderAction(button.dataset.orderAction));
+    });
+
+    orderPriceButtons.forEach((button) => {
+        button.addEventListener('click', () => setOrderPriceMode(button.dataset.priceMode));
+    });
+
+    document.querySelectorAll('[data-step-target]').forEach((button) => {
+        button.addEventListener('click', () => {
+            changeOrderInputValue(button.dataset.stepTarget, button.dataset.step);
+        });
+    });
+
+    orderPriceInput?.addEventListener('input', () => {
+        sanitizeOrderNumberInput(orderPriceInput);
+        hasUserEditedOrderPrice = true;
+        updateOrderTotal();
+    });
+
+    orderPriceInput?.addEventListener('beforeinput', allowOnlyOrderDigits);
+
+    orderPriceInput?.addEventListener('blur', () => {
+        formatOrderInputValue(orderPriceInput);
+        updateOrderTotal();
+    });
+
+    orderQuantityInput?.addEventListener('input', () => {
+        sanitizeOrderNumberInput(orderQuantityInput);
+        clampSellQuantityInput();
+        updateOrderTotal();
+    });
+
+    orderQuantityInput?.addEventListener('beforeinput', allowOnlyOrderDigits);
+
+    orderQuantityInput?.addEventListener('blur', () => {
+        clampSellQuantityInput();
+        formatOrderInputValue(orderQuantityInput);
+        updateOrderTotal();
+    });
+
+    pendingOrdersList?.addEventListener('beforeinput', (event) => {
+        if (event.target.matches('[data-pending-price], [data-pending-quantity]')) {
+            allowOnlyOrderDigits(event);
+        }
+    });
+
+    pendingOrdersList?.addEventListener('input', (event) => {
+        const input = event.target.closest('[data-pending-price], [data-pending-quantity]');
+        if (input) sanitizeOrderNumberInput(input);
+    });
+
+    pendingOrdersList?.addEventListener('blur', (event) => {
+        const input = event.target.closest('[data-pending-price], [data-pending-quantity]');
+        if (input) formatOrderInputValue(input);
+    }, true);
+
+    pendingOrdersList?.addEventListener('click', async (event) => {
+        const stepButton = event.target.closest('[data-pending-step-target]');
+        if (stepButton) {
+            const card = stepButton.closest('.pending-order-card');
+            if (!card) return;
+
+            const target = stepButton.dataset.pendingStepTarget;
+            const input = target === 'quantity'
+                ? card.querySelector('[data-pending-quantity]')
+                : card.querySelector('[data-pending-price]');
+            if (!input) return;
+
+            const value = parseOrderNumber(input.value);
+            const step = target === 'quantity' ? 1 : getOrderPriceStepFor(value);
+            const nextValue = Math.max(0, value + (Number(stepButton.dataset.step) || 0) * step);
+            input.value = nextValue ? formatNumber(nextValue) : '';
+            return;
+        }
+
+        const button = event.target.closest('[data-modify-pending-order], [data-cancel-pending-order]');
+        if (!button) return;
+
+        const card = button.closest('.pending-order-card');
+        if (!card) return;
+
+        const quantity = parseOrderNumber(card.querySelector('[data-pending-quantity]')?.value);
+        if (button.matches('[data-cancel-pending-order]')) {
+            if (!quantity) {
+                setOrderMessage('취소 수량을 입력하세요.', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            setOrderMessage('취소 주문을 전송하는 중입니다...');
+            try {
+                const response = await fetch('/api/order/cancel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        orderNo: card.dataset.orderNo,
+                        stockCode: card.dataset.stockCode,
+                        exchange: card.dataset.exchange || 'SOR',
+                        quantity,
+                    }),
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+                setOrderMessage('취소 주문완료', 'success', { autoHide: 4000 });
+                fetchPendingOrders();
+            } catch (error) {
+                setOrderMessage(error.message || '취소 주문에 실패했습니다.', 'error');
+            } finally {
+                button.disabled = false;
+            }
+            return;
+        }
+
+        const price = parseOrderNumber(card.querySelector('[data-pending-price]')?.value);
+        if (!price || !quantity) {
+            setOrderMessage('정정 가격과 수량을 입력하세요.', 'error');
+            return;
+        }
+
+        button.disabled = true;
+        setOrderMessage('정정 주문을 전송하는 중입니다...');
+        try {
+            const response = await fetch('/api/order/modify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderNo: card.dataset.orderNo,
+                    stockCode: card.dataset.stockCode,
+                    exchange: card.dataset.exchange || 'SOR',
+                    price,
+                    quantity,
+                }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            setOrderMessage('정정 주문완료', 'success', { autoHide: 4000 });
+            fetchPendingOrders();
+        } catch (error) {
+            setOrderMessage(error.message || '정정 주문에 실패했습니다.', 'error');
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    orderForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        submitStockOrder();
+    });
 
     const getIndicatorFieldValue = (indicator, field) => {
         const values = normalizeIndicatorValues(indicator.key, indicator.values);
@@ -513,7 +1141,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateChartUrl = (code = currentStockCode, interval = currentChartInterval) => {
-        if (!code) return;
+        if (!code) {
+            window.history.replaceState(null, '', window.location.pathname);
+            return;
+        }
 
         const params = new URLSearchParams();
         params.set('code', code);
@@ -540,6 +1171,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const setMarketSessionStatus = (isRegularMarket, hasCurrentChartData = hasTodayChartCandle) => {
         if (!serverConnectionStatus || !serverConnectionText) return;
+
+        if (!isApiServerAvailable) {
+            serverConnectionStatus.classList.remove('is-connected');
+            serverConnectionStatus.classList.add('is-disconnected');
+            serverConnectionText.textContent = 'API연결실패';
+            return;
+        }
 
         const isOpen = isRegularMarket && hasCurrentChartData;
         serverConnectionStatus.classList.toggle('is-connected', isOpen);
@@ -606,14 +1244,50 @@ document.addEventListener('DOMContentLoaded', () => {
         marketSessionTimer = setInterval(updateMarketSessionStatus, 30000);
     };
 
-    const setLoadingView = (query) => {
-        if (stockEls.name) stockEls.name.textContent = query || '-';
-        if (stockEls.code && !currentStockCode) stockEls.code.textContent = '-';
+    const setApiServerAvailability = (isAvailable) => {
+        if (isApiServerAvailable === isAvailable) return;
+        isApiServerAvailable = isAvailable;
+        updateMarketSessionStatus();
+        if (!isAvailable) {
+            setOrderableCashText('계좌 조회 실패', true);
+        } else if (currentOrderAction !== 'pending') {
+            fetchOrderableCash();
+        }
+    };
+
+    const checkApiServerHealth = async () => {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 2500);
+
+        try {
+            const response = await fetch('/api/health', {
+                cache: 'no-store',
+                signal: controller.signal,
+            });
+            setApiServerAvailability(response.ok);
+        } catch {
+            setApiServerAvailability(false);
+        } finally {
+            window.clearTimeout(timeoutId);
+        }
+    };
+
+    const startApiHealthTimer = () => {
+        checkApiServerHealth();
+        if (apiHealthTimer) clearInterval(apiHealthTimer);
+        apiHealthTimer = setInterval(checkApiServerHealth, 5000);
+    };
+
+    const setLoadingView = () => {
+        if (stockEls.name) stockEls.name.textContent = '-';
+        if (stockEls.code) stockEls.code.textContent = '-';
         if (stockEls.price) stockEls.price.textContent = '-';
         if (stockEls.change) stockEls.change.textContent = '-';
         if (stockEls.high) stockEls.high.textContent = '-';
         if (stockEls.low) stockEls.low.textContent = '-';
         if (stockEls.volume) stockEls.volume.textContent = '-';
+        if (orderPriceInput) orderPriceInput.value = '';
+        hasUserEditedOrderPrice = false;
 
         setDirectionClass(stockEls.price, 'flat');
         setDirectionClass(stockEls.change, 'flat');
@@ -621,11 +1295,35 @@ document.addEventListener('DOMContentLoaded', () => {
         setDirectionClass(stockEls.low, 'flat');
     };
 
+    const resetStockView = () => {
+        currentStockCode = '';
+        latestStockPrice = 0;
+        if (refreshTimer) {
+            clearInterval(refreshTimer);
+            refreshTimer = null;
+        }
+        if (realtimeSource) {
+            realtimeSource.close();
+            realtimeSource = null;
+        }
+
+        setLoadingView();
+        latestCandles = [];
+        chartStartIndex = 0;
+        chartHoverPoint = null;
+        setTodayChartCandleStatus(false);
+        updateChartUrl('');
+        redrawLatestChart();
+        resetSellableQuantity();
+        updateOrderTotal();
+    };
+
     const updateStockView = (stock) => {
         const direction = stock.direction || 'flat';
         const sign = direction === 'up' ? '\u25B2' : direction === 'down' ? '\u25BC' : '-';
 
         currentStockCode = stock.code || currentStockCode;
+        latestStockPrice = Number(stock.price) || latestStockPrice || 0;
 
         if (stockEls.name) stockEls.name.textContent = stock.name || '-';
         if (stockEls.code) stockEls.code.textContent = stock.code || '-';
@@ -636,11 +1334,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (stockEls.high) stockEls.high.textContent = formatNumber(stock.high);
         if (stockEls.low) stockEls.low.textContent = formatNumber(stock.low);
         if (stockEls.volume) stockEls.volume.textContent = formatNumber(stock.volume);
+        if (currentOrderAction === 'pending') {
+            fetchPendingOrders();
+        } else if (currentOrderAction === 'sell') {
+            fetchStockHolding();
+        }
 
         setDirectionClass(stockEls.price, direction);
         setDirectionClass(stockEls.change, direction);
         setDirectionClass(stockEls.high, 'up');
         setDirectionClass(stockEls.low, 'down');
+        updateOrderFromQuote(stock.price);
     };
 
     const renderSearchMessage = (message) => {
@@ -695,8 +1399,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const hydrateSearchResultsFromDom = () => {
+        if (!searchResults) return false;
+
+        const items = Array.from(searchResults.querySelectorAll('.search-result-item'));
+        if (!items.length) return false;
+
+        latestResults = items.map((item) => ({
+            code: item.dataset.code || '',
+            name: item.querySelector('.search-result-name')?.textContent?.trim() || '',
+        })).filter((stock) => stock.code);
+
+        if (!latestResults.length) return false;
+
+        const activeItemIndex = items.findIndex((item) => item.classList.contains('is-active'));
+        activeSearchIndex = activeItemIndex >= 0 ? activeItemIndex : 0;
+        return true;
+    };
+
     const moveActiveSearchResult = (direction) => {
-        if (!latestResults.length) return;
+        if (!latestResults.length && !hydrateSearchResultsFromDom()) return;
         activeSearchIndex = (activeSearchIndex + direction + latestResults.length) % latestResults.length;
         updateActiveSearchResult();
     };
@@ -842,10 +1564,38 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const fetchChart = async (code = currentStockCode) => {
-        if (!code) return;
+        if (!code) {
+            chartRequestId += 1;
+            if (chartRetryTimer) {
+                clearTimeout(chartRetryTimer);
+                chartRetryTimer = null;
+            }
+            latestCandles = [];
+            setTodayChartCandleStatus(false);
+            redrawLatestChart();
+            return;
+        }
+
+        const requestId = chartRequestId + 1;
+        chartRequestId = requestId;
+        if (chartRetryTimer) {
+            clearTimeout(chartRetryTimer);
+            chartRetryTimer = null;
+        }
+
+        const scheduleChartRetry = (message) => {
+            if (requestId !== chartRequestId || chartRetryTimer) return;
+            setChartStatus(message);
+            chartRetryTimer = setTimeout(() => {
+                chartRetryTimer = null;
+                if (currentStockCode === code && currentChartInterval) {
+                    fetchChart(code);
+                }
+            }, 5000);
+        };
 
         try {
-            setChartStatus('李⑦듃 ?곗씠?곕? 遺덈윭?ㅻ뒗 以?..');
+            setChartStatus('차트 데이터를 불러오는 중...');
             const response = await fetch(`/api/chart/${encodeURIComponent(code)}?interval=${encodeURIComponent(currentChartInterval)}`, {
                 cache: 'no-store',
             });
@@ -856,17 +1606,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const payload = await response.json();
-            latestCandles = payload.candles || [];
+            if (requestId !== chartRequestId) return;
+
+            const nextCandles = payload.candles || [];
+            if (!nextCandles.length) {
+                if (latestCandles.length) {
+                    scheduleChartRetry('차트 데이터가 잠시 비어 있어 기존 차트를 유지합니다. 다시 확인 중...');
+                    return;
+                }
+                scheduleChartRetry('차트 데이터를 다시 확인하는 중...');
+                return;
+            }
+
+            latestCandles = nextCandles;
             setTodayChartCandleStatus(hasTodayCandle(latestCandles));
             visibleCandleCount = Math.min(Math.max(60, visibleCandleCount), Math.max(60, latestCandles.length));
             snapChartToLatest();
             redrawLatestChart();
         } catch (error) {
+            if (requestId !== chartRequestId) return;
             console.error('Chart request failed.', error);
-            setTodayChartCandleStatus(false);
-            latestCandles = [];
-            redrawLatestChart();
-            setChartStatus('李⑦듃 ?곗씠?곕? 遺덈윭?ㅼ? 紐삵뻽?듬땲??');
+            if (latestCandles.length) {
+                scheduleChartRetry('차트 요청이 잠시 실패해 기존 차트를 유지합니다. 다시 확인 중...');
+                return;
+            }
+            scheduleChartRetry('차트 데이터를 다시 확인하는 중...');
         }
     };
 
@@ -967,6 +1731,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyRealtimeTickToQuote = (tick) => {
         if (tick.code && tick.code !== currentStockCode) return;
 
+        if (tick.price) {
+            latestStockPrice = Number(tick.price) || latestStockPrice;
+            updateOrderFromQuote(tick.price);
+        }
         if (stockEls.price) stockEls.price.textContent = formatNumber(tick.price);
         if (stockEls.change && tick.change !== null) {
             const sign = tick.direction === 'up' ? '\u25B2' : tick.direction === 'down' ? '\u25BC' : '-';
@@ -1009,7 +1777,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             if (showLoading) {
-                setLoadingView(keyword);
+                setLoadingView();
             }
             const response = await fetch(`/api/stock/${encodeURIComponent(keyword)}`, {
                 cache: 'no-store',
@@ -1029,6 +1797,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return stock;
         } catch (error) {
             console.error('Stock request failed.', error);
+            if (showLoading) {
+                resetStockView();
+            }
             return null;
         }
     };
@@ -1069,9 +1840,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const searchStocks = async (query) => {
         const keyword = String(query || '').trim();
+        latestResults = [];
+        activeSearchIndex = -1;
 
         if (!keyword) {
-            latestResults = [];
             renderSearchMessage('종목명 또는 종목코드를 입력하세요.');
             return;
         }
@@ -1100,6 +1872,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const moveActiveSearchResultFromInput = (direction) => {
+        if (latestResults.length || hydrateSearchResultsFromDom()) {
+            moveActiveSearchResult(direction);
+            return;
+        }
+
+        const keyword = searchBar?.value.trim();
+        if (!keyword) return;
+
+        searchStocks(keyword).then(() => {
+            moveActiveSearchResult(direction);
+        });
+    };
+
     if (searchBar && searchModal && searchResults) {
         restoreSearchDraft();
         updateSearchClearButton();
@@ -1117,6 +1903,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         searchBar.addEventListener('input', () => {
             searchModal.classList.add('show');
+            latestResults = [];
+            activeSearchIndex = -1;
             saveSearchDraft(searchBar.value);
             updateSearchClearButton();
             clearTimeout(searchTimer);
@@ -1145,7 +1933,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 clearTimeout(searchTimer);
                 searchModal.classList.add('show');
-                moveActiveSearchResult(1);
+                moveActiveSearchResultFromInput(1);
                 return;
             }
 
@@ -1153,7 +1941,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 event.preventDefault();
                 clearTimeout(searchTimer);
                 searchModal.classList.add('show');
-                moveActiveSearchResult(-1);
+                moveActiveSearchResultFromInput(-1);
                 return;
             }
 
@@ -1163,6 +1951,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const keyword = searchBar.value.trim();
             const selected = activeSearchIndex >= 0 ? latestResults[activeSearchIndex] : latestResults[0];
             const target = selected?.code || keyword;
+            if (!target) {
+                renderSearchMessage('종목명 또는 종목코드를 입력하세요.');
+                return;
+            }
+
             selectStock(target);
         });
 
@@ -1319,7 +2112,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     startMarketSessionStatusTimer();
+    startApiHealthTimer();
     setActiveIntervalButton();
+    setRightPanel('order');
+    setOrderAction('buy');
+    setOrderPriceMode('limit');
     initIndicatorStrategyPanel();
     redrawLatestChart();
 

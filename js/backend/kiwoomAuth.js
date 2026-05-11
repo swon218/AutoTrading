@@ -5,6 +5,7 @@ const path = require('path');
 const { REAL_HOST, REAL_WS_HOST, ROOT_DIR } = require('./config');
 
 const TOKEN_REFRESH_BUFFER_MS = 10 * 60 * 1000;
+const KIWOOM_TERMINAL_AUTH_GUIDE = '키움 REST API 지정단말기 인증 실패입니다. PC/서버의 공인 IP가 바뀐 경우 키움증권 홈페이지 REST API 메뉴에서 현재 IP 주소를 추가하거나 변경하세요.';
 
 let tokenCache = {
     token: '',
@@ -82,6 +83,14 @@ function parseKiwoomDateTime(value) {
     return new Date(year, month, day, hour, minute, second).getTime();
 }
 
+function formatTokenIssue(payload) {
+    const rawPayload = JSON.stringify(payload);
+    const message = String(payload.return_msg || payload.message || rawPayload);
+    const isTerminalAuthFailure = message.includes('8050') || message.includes('지정단말기');
+    const guide = isTerminalAuthFailure ? ` ${KIWOOM_TERMINAL_AUTH_GUIDE}` : '';
+    return `토큰 발급 실패: ${rawPayload}${guide}`;
+}
+
 async function getAccessToken() {
     const now = Date.now();
     if (tokenCache.token && tokenCache.expiresAt - TOKEN_REFRESH_BUFFER_MS > now) {
@@ -100,7 +109,7 @@ async function getAccessToken() {
     );
 
     if (!payload.token) {
-        throw new Error(`토큰 발급 실패: ${JSON.stringify(payload)}`);
+        throw new Error(formatTokenIssue(payload));
     }
 
     tokenCache = {
@@ -152,6 +161,7 @@ async function requestKiwoomTr(apiId, body, endpoint = '/api/dostk/stkinfo') {
 }
 
 module.exports = {
+    formatTokenIssue,
     getAccessToken,
     getKiwoomConfig,
     requestKiwoomTr,

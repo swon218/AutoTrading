@@ -11,6 +11,14 @@ const {
     getIndicatorStrategies,
     updateIndicatorStrategy,
 } = require('./backend/strategies');
+const { getOrderableCash, getPortfolio, getStockHolding } = require('./backend/account');
+const {
+    cancelStockOrder,
+    getPendingOrders,
+    modifyStockOrder,
+    placeStockOrder,
+} = require('./backend/orders');
+const { getHomeRanking } = require('./backend/rankings');
 const { getStockInfo, resolveStockCode, searchStocks } = require('./backend/stocks');
 const { subscribeRealtime } = require('./backend/realtime');
 
@@ -93,11 +101,28 @@ const server = http.createServer(async (request, response) => {
     const realtimeMatch = requestUrl.pathname.match(/^\/api\/realtime\/(.+)$/);
     const strategyMatch = requestUrl.pathname.match(/^\/api\/indicator-strategies\/(\d+)$/);
 
+    if (request.method === 'GET' && requestUrl.pathname === '/api/health') {
+        sendJson(response, 200, { ok: true });
+        return;
+    }
+
     if (request.method === 'GET' && requestUrl.pathname === '/api/search') {
         try {
             const query = requestUrl.searchParams.get('q') || '';
             const results = await searchStocks(query);
             sendJson(response, 200, { results });
+        } catch (error) {
+            sendJson(response, 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/home-rankings') {
+        try {
+            const type = requestUrl.searchParams.get('type') || 'realtime';
+            const limit = requestUrl.searchParams.get('limit') || '10';
+            const ranking = await getHomeRanking(type, limit);
+            sendJson(response, 200, ranking);
         } catch (error) {
             sendJson(response, 500, { message: error.message });
         }
@@ -113,6 +138,37 @@ const server = http.createServer(async (request, response) => {
         return;
     }
 
+    if (request.method === 'GET' && requestUrl.pathname === '/api/account/orderable-cash') {
+        try {
+            const account = await getOrderableCash();
+            sendJson(response, 200, account);
+        } catch (error) {
+            sendJson(response, 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/account/portfolio') {
+        try {
+            const portfolio = await getPortfolio();
+            sendJson(response, 200, portfolio);
+        } catch (error) {
+            sendJson(response, 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/account/holding') {
+        try {
+            const stockCode = requestUrl.searchParams.get('code') || '';
+            const holding = await getStockHolding(stockCode);
+            sendJson(response, 200, holding);
+        } catch (error) {
+            sendJson(response, 500, { message: error.message });
+        }
+        return;
+    }
+
     if (request.method === 'POST' && requestUrl.pathname === '/api/indicator-strategies') {
         try {
             const payload = await parseRequestBody(request);
@@ -121,6 +177,50 @@ const server = http.createServer(async (request, response) => {
         } catch (error) {
             const statusCode = error.message === 'Strategy name already exists.' ? 409 : 400;
             sendJson(response, statusCode, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/order') {
+        try {
+            const payload = await parseRequestBody(request);
+            const order = await placeStockOrder(payload);
+            sendJson(response, 200, order);
+        } catch (error) {
+            sendJson(response, 400, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/order/modify') {
+        try {
+            const payload = await parseRequestBody(request);
+            const order = await modifyStockOrder(payload);
+            sendJson(response, 200, order);
+        } catch (error) {
+            sendJson(response, 400, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/order/cancel') {
+        try {
+            const payload = await parseRequestBody(request);
+            const order = await cancelStockOrder(payload);
+            sendJson(response, 200, order);
+        } catch (error) {
+            sendJson(response, 400, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/orders/pending') {
+        try {
+            const stockCode = requestUrl.searchParams.get('code') || '';
+            const orders = await getPendingOrders(stockCode);
+            sendJson(response, 200, { orders });
+        } catch (error) {
+            sendJson(response, 500, { message: error.message });
         }
         return;
     }

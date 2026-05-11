@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoTrading - 메인</title>
+    <title>AutoTrading - 자산 현황</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -67,7 +67,7 @@
     <div class="app-content flex flex-1 overflow-hidden">
         <aside id="appSidebar" class="app-sidebar w-16 md:w-64 bg-slate-800 border-r border-slate-700 flex flex-col justify-between shrink-0 transition-all duration-300">
             <nav class="p-4 space-y-2">
-                <a href="#" class="flex items-center space-x-3 text-emerald-400 bg-slate-700/50 p-3 rounded-lg transition-colors">
+                <a href="trading.html" class="flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
                     <i class="fa-solid fa-chart-line text-lg w-6 text-center"></i>
                     <span class="font-medium hidden md:block">트레이딩 대시보드</span>
                 </a>
@@ -75,7 +75,7 @@
                     <i class="fa-solid fa-diagram-project text-lg w-6 text-center"></i>
                     <span class="font-medium hidden md:block">전략 설정</span>
                 </a>
-                <a href="asset.html" class="sidebar-nav-link flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
+                <a href="asset.html" class="sidebar-nav-link flex items-center space-x-3 text-emerald-400 bg-slate-700/50 p-3 rounded-lg transition-colors" aria-current="page">
                     <i class="fa-solid fa-wallet text-lg w-6 text-center"></i>
                     <span class="font-medium hidden md:block">자산 현황</span>
                 </a>
@@ -92,40 +92,71 @@
             </div>
         </aside>
 
-        <main class="app-main home-main flex-1 overflow-hidden">
-            <section class="home-ranking-shell" aria-label="홈 종목 랭킹">
-                <div class="home-ranking-tabs" role="tablist" aria-label="랭킹 종류">
-                    <button class="home-ranking-tab is-active" type="button" data-ranking-type="realtime">실시간조회</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="movers">상승률/하락률</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="volume">거래량 상위</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="volumeSpike">거래량 급증</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="domesticTradeTop">개인/기관 매매상위</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="foreignInstitutionTop">외국인/기관 매매상위</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="sector">섹터상위</button>
+        <main class="app-main asset-main flex-1 overflow-hidden">
+            <section class="asset-shell" aria-label="자산 현황">
+                <div class="asset-toolbar">
+                    <div>
+                        <h1>자산 현황</h1>
+                        <p id="assetUpdatedAt">계좌 보유종목을 불러오는 중...</p>
+                    </div>
+                    <button id="assetRefreshButton" class="asset-refresh-button" type="button" title="새로고침" aria-label="자산 현황 새로고침">
+                        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                    </button>
                 </div>
 
-                <div class="home-ranking-panel">
-                    <div class="home-ranking-panel-head">
-                        <div>
-                            <h1 id="homeRankingTitle">실시간조회</h1>
-                            <p id="homeRankingSubtitle">키움 REST API ka00198 기준 상위 종목</p>
-                        </div>
-                        <div id="homeRankingColumns" class="home-ranking-columns" aria-hidden="true">
-                            <span>현재가</span>
-                            <span>등락률</span>
-                            <span>거래량</span>
-                        </div>
-                        <button id="homeRankingRefresh" class="home-ranking-refresh" type="button" title="새로고침" aria-label="랭킹 새로고침">
-                            <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
-                        </button>
-                    </div>
-                    <div id="homeRankingStatus" class="home-ranking-status">랭킹을 불러오는 중...</div>
-                    <div id="homeRankingList" class="home-ranking-list"></div>
+                <div class="asset-summary-grid" aria-label="계좌 요약">
+                    <article class="asset-summary-card">
+                        <span>평가금액</span>
+                        <strong id="assetTotalEvaluation">-</strong>
+                    </article>
+                    <article class="asset-summary-card">
+                        <span>매입금액</span>
+                        <strong id="assetTotalPurchase">-</strong>
+                    </article>
+                    <article class="asset-summary-card">
+                        <span>평가손익</span>
+                        <strong id="assetTotalProfit">-</strong>
+                    </article>
+                    <article class="asset-summary-card">
+                        <span>주문가능금액</span>
+                        <strong id="assetOrderableCash">-</strong>
+                    </article>
                 </div>
+
+                <div class="asset-content-grid">
+                    <section class="asset-panel asset-allocation-panel" aria-label="포트폴리오 비중">
+                        <div class="asset-panel-head">
+                            <h2>포트폴리오 비중</h2>
+                            <span id="assetHoldingCount">0종목</span>
+                        </div>
+                        <div id="assetAllocationList" class="asset-allocation-list"></div>
+                    </section>
+
+                    <section class="asset-panel asset-holdings-panel" aria-label="보유 종목">
+                        <div class="asset-panel-head">
+                            <div class="asset-position-tabs" role="tablist" aria-label="자산 목록 전환">
+                                <button id="assetHoldingsTab" class="asset-position-tab is-active" type="button" data-asset-list-tab="holdings">보유 종목</button>
+                                <button id="assetPendingTab" class="asset-position-tab" type="button" data-asset-list-tab="pending">미체결 종목</button>
+                            </div>
+                            <span>클릭하면 대시보드로 이동</span>
+                        </div>
+                        <div class="asset-holding-header" aria-hidden="true">
+                            <span>종목</span>
+                            <span>매입가</span>
+                            <span>보유수량</span>
+                            <span>현재가</span>
+                            <span>수수료/세금</span>
+                            <span>손익률</span>
+                        </div>
+                        <div id="assetHoldingList" class="asset-holding-list"></div>
+                    </section>
+                </div>
+
+                <div id="assetStatus" class="asset-status show">계좌 보유종목을 불러오는 중...</div>
             </section>
         </main>
     </div>
 
-    <script src="js/home.js"></script>
+    <script src="js/asset.js"></script>
 </body>
 </html>

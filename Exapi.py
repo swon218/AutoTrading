@@ -26,8 +26,7 @@ from dataclasses import dataclass
 from typing import Any
 
 
-# 여기에 키를 입력하세요.
-# 예: APPKEY = "abc..."
+# 실제 키는 .env의 KIWOOM_APPKEY / KIWOOM_SECRETKEY에서 읽습니다.
 APPKEY = ""
 SECRETKEY = ""
 
@@ -217,19 +216,37 @@ def run_probe(host: str, token: str) -> None:
         print_probe_result(api, status, headers, payload)
 
 
+def load_dotenv(path: str = ".env") -> None:
+    if not os.path.exists(path):
+        return
+
+    with open(path, "r", encoding="utf-8") as file:
+        for line in file:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip("\"'")
+            if key and key not in os.environ:
+                os.environ[key] = value
+
+
 def get_key(name: str, code_value: str) -> str:
     return code_value.strip() or os.getenv(name, "").strip()
 
 
 def main() -> int:
     print_catalog()
+    load_dotenv()
 
     appkey = get_key("KIWOOM_APPKEY", APPKEY)
     secretkey = get_key("KIWOOM_SECRETKEY", SECRETKEY)
 
     if not appkey or not secretkey:
         print("\nAPPKEY / SECRETKEY가 비어 있어 실제 API 호출은 건너뜁니다.")
-        print("파일 상단의 APPKEY, SECRETKEY에 값을 넣고 다시 실행하면 샘플 데이터를 받아옵니다.")
+        print(".env에 KIWOOM_APPKEY, KIWOOM_SECRETKEY를 넣고 다시 실행하면 샘플 데이터를 받아옵니다.")
         return 0
 
     host = REAL_HOST

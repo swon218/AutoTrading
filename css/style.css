@@ -59,15 +59,19 @@ body.overflow-hidden {
     border-right-color: transparent;
 }
 
+.sidebar-nav-link {
+    min-height: 2.75rem;
+}
+
 .app-content,
 .app-main {
     min-width: 0;
 }
 
 .indicator-sidebar {
-    width: clamp(18rem, 27vw, 21.875rem);
-    min-width: 18rem;
-    max-width: 21.875rem;
+    width: clamp(19rem, 28vw, 23rem);
+    min-width: 19rem;
+    max-width: 23rem;
 }
 
 .main_m {
@@ -78,6 +82,355 @@ body.overflow-hidden {
     min-height: 0;
     padding: 1rem;
     overflow: hidden;
+}
+
+.home-main {
+    background-color: #0f172a;
+}
+
+.home-ranking-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    min-height: 0;
+    padding: 0.85rem;
+    overflow: hidden;
+}
+
+.home-ranking-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 3.5rem;
+    padding: 0.55rem;
+    overflow-x: auto;
+    background-color: #111827;
+    border: 1px solid #263245;
+    border-radius: 0.5rem;
+}
+
+.home-ranking-tab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    min-width: 5.75rem;
+    padding: 0 0.9rem;
+    border: 1px solid transparent;
+    border-radius: 0.45rem;
+    background-color: #1e293b;
+    color: #cbd5e1;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 800;
+    white-space: nowrap;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.home-ranking-tab:hover {
+    background-color: #263245;
+    color: #ffffff;
+}
+
+.home-ranking-tab.is-active {
+    background-color: #10b981;
+    border-color: #34d399;
+    color: #052e2b;
+}
+
+.home-ranking-panel {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    background-color: #111827;
+    border: 1px solid #263245;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.home-ranking-panel-head {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) minmax(7rem, 10rem) minmax(5rem, 7rem) minmax(6.5rem, 9rem) 2.25rem;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 4.5rem;
+    padding: 1rem 1rem 1rem 0.85rem;
+    border-bottom: 1px solid #263245;
+}
+
+.home-ranking-panel-head > div:first-child {
+    grid-column: 1 / 3;
+    min-width: 0;
+}
+
+.home-ranking-panel-head h1 {
+    color: #f8fafc;
+    font-size: 1.15rem;
+    font-weight: 900;
+    line-height: 1.25;
+}
+
+.home-ranking-panel-head p {
+    margin-top: 0.25rem;
+    color: #94a3b8;
+    font-size: 0.8rem;
+}
+
+.home-ranking-columns {
+    display: contents;
+    color: #94a3b8;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.home-ranking-columns span {
+    justify-self: stretch;
+    padding-right: 1rem;
+    color: #94a3b8;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.home-ranking-columns.is-realtime span:last-child {
+    visibility: hidden;
+}
+
+.home-ranking-columns.is-mover {
+    display: none;
+}
+
+.home-ranking-refresh {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid #334155;
+    border-radius: 0.45rem;
+    background-color: #1e293b;
+    color: #cbd5e1;
+    cursor: pointer;
+    justify-self: end;
+    grid-column: 6;
+}
+
+.home-ranking-refresh:hover {
+    background-color: #263245;
+    color: #ffffff;
+}
+
+.home-ranking-status {
+    display: none;
+    padding: 1rem 1.15rem;
+    color: #94a3b8;
+    font-size: 0.88rem;
+}
+
+.home-ranking-status.show {
+    display: block;
+}
+
+.home-ranking-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.9rem 1rem 1rem 0.85rem;
+}
+
+.home-ranking-list.is-card-layout {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+}
+
+.home-ranking-list.is-mover-layout {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 1rem;
+}
+
+.home-mover-column {
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    border: 1px solid #263245;
+    border-radius: 0.5rem;
+    background-color: #111827;
+    overflow: hidden;
+}
+
+.home-mover-column-head {
+    position: relative;
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) minmax(5.6rem, 6.8rem) minmax(4.2rem, 5.2rem) minmax(5.5rem, 6.8rem);
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 3rem;
+    padding: 0 0.75rem;
+    border-bottom: 1px solid #263245;
+    background-color: #182235;
+}
+
+.home-mover-column-head h2 {
+    grid-column: 1 / 3;
+    justify-self: start;
+    color: #f8fafc;
+    font-size: 0.98rem;
+    font-weight: 900;
+    z-index: 1;
+}
+
+.home-mover-column-labels {
+    display: grid;
+    grid-column: 3 / 6;
+    grid-template-columns: minmax(5.6rem, 6.8rem) minmax(4.2rem, 5.2rem) minmax(5.5rem, 6.8rem);
+    gap: 0.55rem;
+    padding-right: 0.75rem;
+    transform: translateX(-1.4rem);
+    color: #94a3b8;
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+
+.home-mover-column-labels span {
+    justify-self: stretch;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.home-mover-list {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.65rem;
+    overflow-y: auto;
+    padding: 0.75rem;
+}
+
+.home-ranking-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 5rem;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+
+.home-ranking-card {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr) minmax(7rem, 10rem) minmax(5rem, 7rem) minmax(6.5rem, 9rem) 2.25rem;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    min-height: 3.85rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #263245;
+    border-radius: 0.5rem;
+    background-color: #182235;
+    cursor: pointer;
+    text-align: left;
+}
+
+.home-ranking-card:hover {
+    border-color: #10b981;
+    background-color: #1b2a3f;
+}
+
+.home-ranking-list.is-card-layout .home-ranking-card {
+    grid-template-columns: 3rem minmax(9rem, 1fr) minmax(6.5rem, 8rem) minmax(5rem, 6rem) minmax(6rem, 8rem) 2.25rem;
+    min-height: 4.75rem;
+    padding: 0.8rem;
+}
+
+.home-ranking-list.is-realtime-layout .home-ranking-card {
+    grid-template-columns: 3rem minmax(0, 1fr) minmax(7rem, 10rem) minmax(5rem, 7rem) minmax(6.5rem, 9rem) 2.25rem;
+}
+
+.home-mover-list .home-ranking-card {
+    grid-template-columns: 2.5rem minmax(0, 1fr) minmax(5.6rem, 6.8rem) minmax(4.2rem, 5.2rem) minmax(5.5rem, 6.8rem);
+    gap: 0.55rem;
+    padding: 0.7rem 0.75rem;
+}
+
+.home-mover-list .home-ranking-refresh-space {
+    display: none;
+}
+
+.home-ranking-rank {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.45rem;
+    background-color: #0f172a;
+    color: #e2e8f0;
+    font-size: 0.86rem;
+    font-weight: 900;
+}
+
+.home-ranking-name {
+    min-width: 0;
+}
+
+.home-ranking-name strong {
+    display: block;
+    overflow: hidden;
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.home-ranking-name span {
+    display: block;
+    margin-top: 0.2rem;
+    color: #64748b;
+    font-size: 0.75rem;
+}
+
+.home-ranking-price,
+.home-ranking-rate,
+.home-ranking-volume {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.home-ranking-price {
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    font-weight: 900;
+}
+
+.home-ranking-rate {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.home-ranking-volume {
+    color: #cbd5e1;
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.home-ranking-card.is-up .home-ranking-rate {
+    color: #ef4444;
+}
+
+.home-ranking-card.is-down .home-ranking-rate {
+    color: #3b82f6;
 }
 
 .main_a {
@@ -220,6 +573,41 @@ body.overflow-hidden {
     min-width: 0;
 }
 
+.right-panel-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.35rem;
+    padding: 0.75rem;
+    border-bottom: 1px solid #334155;
+    background-color: rgba(30, 41, 59, 0.5);
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.right-panel-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 2.25rem;
+    border: 0;
+    border-radius: 0.45rem;
+    background-color: transparent;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.right-panel-tab:hover {
+    color: #e2e8f0;
+    background-color: #263245;
+}
+
+.right-panel-tab.is-active {
+    color: #ffffff;
+    background-color: #334155;
+}
+
 .indicator-strategy-body {
     display: flex;
     flex: 1;
@@ -227,6 +615,787 @@ body.overflow-hidden {
     flex-direction: column;
     gap: 0.9rem;
     padding: 1rem;
+}
+
+.order-panel-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    flex: 1;
+    min-height: 0;
+    padding: 0.75rem;
+    overflow-y: auto;
+}
+
+.indicator-strategy-body.hidden,
+.order-panel-body.hidden {
+    display: none;
+}
+
+.order-top-tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 0.55rem;
+}
+
+.order-top-tab {
+    height: 2rem;
+    padding: 0 0.85rem;
+    border: 0;
+    border-radius: 0.45rem;
+    background-color: #334155;
+    color: #ffffff;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.order-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.72rem;
+}
+
+.order-side-tabs,
+.order-price-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    background-color: #252838;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.order-price-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.order-side-tab,
+.order-price-tab,
+.order-stepper button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+.order-side-tab,
+.order-price-tab {
+    height: 2rem;
+    background-color: transparent;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.order-side-tab.is-active[data-order-action="buy"],
+.order-submit-button {
+    background-color: #be4457;
+    color: #ffffff;
+}
+
+.order-side-tab.is-active[data-order-action="sell"] {
+    background-color: #345fa8;
+    color: #ffffff;
+}
+
+.order-side-tab.is-active[data-order-action="pending"],
+.order-price-tab.is-active {
+    background-color: #4b4d60;
+    color: #ffffff;
+}
+
+.order-field,
+.order-control-row {
+    display: grid;
+    grid-template-columns: 5.2rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.55rem;
+}
+
+.order-field > span,
+.order-control-row > label {
+    color: #e2e8f0;
+    font-size: 0.8rem;
+    font-weight: 800;
+    line-height: 1.35;
+}
+
+.order-field-select select,
+.order-stepper input,
+.order-total-wrap input,
+.order-holding-summary input,
+#orderAvailableAmount {
+    width: 100%;
+    height: 2.15rem;
+    min-width: 0;
+    background-color: #111827;
+    border: 1px solid #3b4254;
+    border-radius: 0.45rem;
+    color: #f8fafc;
+    font-size: 0.84rem;
+    font-weight: 700;
+    outline: none;
+    padding: 0 0.7rem;
+}
+
+.order-holding-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.order-holding-summary > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.order-holding-summary span {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.order-holding-summary input {
+    text-align: right;
+}
+
+.order-holding-summary.is-error input {
+    color: #fb7185;
+}
+
+#orderPriceInput,
+#orderQuantityInput {
+    padding-right: 2.2rem;
+    text-align: right;
+}
+
+.order-field-select select:focus,
+.order-stepper input:focus {
+    border-color: #10b981;
+}
+
+.order-stepper {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 2rem 2rem;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.order-stepper input {
+    grid-column: 1 / 2;
+}
+
+.order-unit {
+    position: absolute;
+    right: 4.9rem;
+    color: #f8fafc;
+    font-size: 0.78rem;
+    font-weight: 800;
+    pointer-events: none;
+}
+
+.order-stepper button {
+    height: 2rem;
+    min-width: 2rem;
+    border-radius: 0.45rem;
+    background-color: #2d3142;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.order-stepper button:hover {
+    background-color: #3b4254;
+    color: #ffffff;
+}
+
+.order-stepper button.hidden {
+    display: none;
+}
+
+.order-total-wrap {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+#orderAvailableAmount {
+    text-align: right;
+}
+
+#orderAvailableAmount.is-error {
+    color: #fb7185;
+}
+
+.order-message {
+    min-height: 1rem;
+    color: #94a3b8;
+    font-size: 0.76rem;
+}
+
+.order-message.is-error {
+    color: #fb7185;
+}
+
+.order-message.is-success {
+    color: #34d399;
+}
+
+.order-submit-button {
+    height: 2.6rem;
+    border: 0;
+    border-radius: 0.55rem;
+    font-size: 0.9rem;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.order-submit-button.is-sell {
+    background-color: #345fa8;
+}
+
+.order-submit-button:disabled {
+    cursor: not-allowed;
+    background-color: #475569;
+    color: #cbd5e1;
+}
+
+.order-trade-section.hidden,
+.pending-orders-panel.hidden {
+    display: none;
+}
+
+.pending-orders-panel {
+    display: flex;
+    min-height: 9rem;
+    flex-direction: column;
+}
+
+.pending-orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.pending-order-empty {
+    min-height: 8rem;
+}
+
+.pending-order-card,
+.pending-order-empty {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 1px solid #334155;
+    border-radius: 0.55rem;
+    background-color: #111827;
+    padding: 0.75rem;
+}
+
+.pending-order-empty {
+    align-items: center;
+    color: #94a3b8;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.pending-order-card {
+    gap: 0.7rem;
+}
+
+.pending-order-card.is-buy {
+    border-left: 3px solid #be4457;
+}
+
+.pending-order-card.is-sell {
+    border-left: 3px solid #345fa8;
+}
+
+.pending-order-header,
+.pending-order-meta,
+.pending-order-edit {
+    display: grid;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.pending-order-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.pending-order-side {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.45rem;
+    height: 1.65rem;
+    border-radius: 0.35rem;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.pending-order-card.is-buy .pending-order-side {
+    background-color: #be4457;
+}
+
+.pending-order-card.is-sell .pending-order-side {
+    background-color: #345fa8;
+}
+
+.pending-order-name {
+    min-width: 0;
+    color: #f8fafc;
+    font-size: 0.9rem;
+    font-weight: 900;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pending-order-number {
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.pending-order-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pending-order-meta span {
+    color: #94a3b8;
+    font-size: 0.72rem;
+}
+
+.pending-order-meta strong {
+    display: block;
+    margin-top: 0.14rem;
+    color: #e2e8f0;
+    font-size: 0.82rem;
+}
+
+.pending-order-edit {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+}
+
+.pending-order-stepper {
+    display: grid;
+    grid-template-columns: minmax(3.75rem, 1fr) 1.75rem 1.75rem;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.pending-order-stepper input {
+    width: 100%;
+    height: 2rem;
+    min-width: 0;
+    background-color: #0f172a;
+    border: 1px solid #3b4254;
+    border-radius: 0.4rem;
+    color: #f8fafc;
+    font-size: 0.82rem;
+    font-weight: 800;
+    outline: none;
+    padding: 0 0.55rem;
+    text-align: right;
+}
+
+.pending-order-stepper button,
+.pending-order-actions button {
+    height: 2rem;
+    border: 0;
+    border-radius: 0.4rem;
+    background-color: #334155;
+    color: #ffffff;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 900;
+    padding: 0 0.75rem;
+}
+
+.pending-order-stepper button {
+    padding: 0;
+}
+
+.pending-order-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(2.5rem, auto));
+    gap: 0.3rem;
+    grid-column: 1 / -1;
+    justify-content: end;
+}
+
+.pending-order-actions button[data-cancel-pending-order] {
+    background-color: #4b5563;
+}
+
+.pending-order-stepper button:hover:not(:disabled),
+.pending-order-actions button:hover:not(:disabled) {
+    background-color: #475569;
+}
+
+.pending-order-actions button[data-cancel-pending-order]:hover:not(:disabled) {
+    background-color: #64748b;
+}
+
+.pending-order-stepper button:disabled,
+.pending-order-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.asset-main {
+    background-color: #162033;
+    color: #e2e8f0;
+}
+
+.asset-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: 100%;
+    padding: 1rem;
+    overflow: auto;
+}
+
+.asset-toolbar,
+.asset-panel,
+.asset-summary-card {
+    border: 1px solid #334155;
+    background-color: #1e293b;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.18);
+}
+
+.asset-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 4.6rem;
+    border-radius: 0.5rem;
+    padding: 0.9rem 1rem;
+}
+
+.asset-toolbar h1 {
+    color: #f8fafc;
+    font-size: 1.2rem;
+    font-weight: 900;
+}
+
+.asset-toolbar p,
+.asset-panel-head span,
+.asset-summary-card span {
+    color: #b6c3d1;
+    font-size: 0.78rem;
+}
+
+.asset-refresh-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border: 1px solid #475569;
+    border-radius: 0.45rem;
+    background-color: #263447;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+.asset-refresh-button:hover {
+    color: #ffffff;
+    background-color: #334155;
+}
+
+.asset-refresh-button.is-loading i {
+    animation: asset-spin 0.9s linear infinite;
+}
+
+@keyframes asset-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.asset-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.asset-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    min-height: 5.2rem;
+    border-radius: 0.5rem;
+    padding: 0.85rem;
+    background-color: #243247;
+}
+
+.asset-summary-card strong {
+    color: #f8fafc;
+    font-size: 1.15rem;
+    font-weight: 900;
+}
+
+.asset-summary-card strong.is-up,
+.asset-holding-row .is-up,
+#assetTotalProfit.is-up {
+    color: #ef4444;
+}
+
+.asset-summary-card strong.is-down,
+.asset-holding-row .is-down,
+#assetTotalProfit.is-down,
+#assetOrderableCash.is-down {
+    color: #60a5fa;
+}
+
+.asset-content-grid {
+    display: grid;
+    grid-template-columns: minmax(18rem, 0.42fr) minmax(0, 1fr);
+    gap: 1rem;
+    min-height: 0;
+    flex: 1;
+}
+
+.asset-panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 18rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.asset-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 3.1rem;
+    border-bottom: 1px solid #334155;
+    padding: 0 1rem;
+    background-color: #243247;
+}
+
+.asset-panel-head h2 {
+    color: #f8fafc;
+    font-size: 0.95rem;
+    font-weight: 900;
+}
+
+.asset-position-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border: 1px solid #334155;
+    border-radius: 0.45rem;
+    background-color: #162033;
+}
+
+.asset-position-tab {
+    min-width: 5.5rem;
+    height: 1.9rem;
+    border: 0;
+    border-radius: 0.35rem;
+    background-color: transparent;
+    color: #b6c3d1;
+    cursor: pointer;
+    font-size: 0.78rem;
+    font-weight: 900;
+}
+
+.asset-position-tab.is-active {
+    background-color: #475569;
+    color: #f8fafc;
+}
+
+.asset-allocation-list,
+.asset-holding-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    padding: 0.75rem;
+    overflow: auto;
+}
+
+.asset-allocation-row,
+.asset-holding-row {
+    border: 1px solid #3b4a60;
+    border-radius: 0.45rem;
+    background-color: #263447;
+    color: #e2e8f0;
+    cursor: pointer;
+}
+
+.asset-allocation-row:hover,
+.asset-holding-row:hover {
+    border-color: #34d399;
+    background-color: #2d3d55;
+}
+
+.asset-allocation-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(4rem, 0.8fr) 3.5rem;
+    align-items: center;
+    gap: 0.6rem;
+    min-height: 3.3rem;
+    padding: 0.65rem;
+}
+
+.asset-allocation-name,
+.asset-holding-name {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 0.15rem;
+    text-align: left;
+}
+
+.asset-allocation-name strong,
+.asset-holding-name strong {
+    color: #f8fafc;
+    font-size: 0.86rem;
+    font-weight: 900;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-allocation-name small,
+.asset-holding-name small,
+.asset-holding-row small {
+    color: #b6c3d1;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.asset-allocation-track {
+    height: 0.45rem;
+    border-radius: 999px;
+    background-color: #162033;
+    overflow: hidden;
+}
+
+.asset-allocation-track span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background-color: #34d399;
+}
+
+.asset-allocation-weight {
+    color: #e2e8f0;
+    font-size: 0.82rem;
+    font-weight: 900;
+    text-align: right;
+}
+
+.asset-holding-header,
+.asset-holding-row {
+    display: grid;
+    grid-template-columns: minmax(9rem, 1.4fr) minmax(5.5rem, 0.75fr) minmax(5rem, 0.7fr) minmax(6rem, 0.8fr) minmax(6.2rem, 0.85fr) minmax(6.5rem, 0.85fr);
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.asset-holding-header.is-pending,
+.asset-pending-row {
+    grid-template-columns: minmax(9rem, 1.4fr) minmax(4.5rem, 0.6fr) minmax(6rem, 0.8fr) minmax(5rem, 0.7fr) minmax(5.5rem, 0.7fr);
+}
+
+.asset-holding-header {
+    min-height: 2.4rem;
+    border-bottom: 1px solid #334155;
+    background-color: #1a2536;
+    color: #b6c3d1;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 0 1.5rem;
+}
+
+.asset-holding-header span:not(:first-child),
+.asset-holding-row span:not(:first-child) {
+    text-align: right;
+}
+
+.asset-holding-row {
+    min-height: 3.8rem;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.asset-profit-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 0.1rem;
+    white-space: nowrap;
+}
+
+.asset-fee-tax-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.1rem;
+    white-space: nowrap;
+}
+
+.asset-fee-tax-cell strong,
+.asset-fee-tax-cell small {
+    color: #e2e8f0;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.asset-profit-cell small {
+    color: #e2e8f0;
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.asset-empty,
+.asset-status {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 8rem;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.asset-empty {
+    display: flex;
+}
+
+.asset-status.show {
+    display: flex;
+}
+
+@media (max-width: 1100px) {
+    .asset-summary-grid,
+    .asset-content-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .asset-holding-header,
+    .asset-holding-row {
+        grid-template-columns: minmax(8rem, 1fr) minmax(5rem, 0.72fr) minmax(4.5rem, 0.65fr) minmax(5.5rem, 0.75fr) minmax(5.8rem, 0.8fr) minmax(6rem, 0.8fr);
+    }
+
+    .asset-holding-header.is-pending,
+    .asset-pending-row {
+        grid-template-columns: minmax(8rem, 1fr) minmax(4.5rem, 0.6fr) minmax(5.5rem, 0.75fr) minmax(4.5rem, 0.65fr) minmax(5rem, 0.65fr);
+    }
 }
 
 .indicator-strategy-toolbar {
@@ -562,6 +1731,14 @@ body.overflow-hidden {
     .app-content {
         display: block;
         overflow: visible;
+    }
+
+    .home-ranking-panel-head {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .home-ranking-list.is-mover-layout {
+        grid-template-columns: 1fr;
     }
 
     .app-sidebar,
