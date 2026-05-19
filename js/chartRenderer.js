@@ -5,23 +5,24 @@ export const drawStockChart = ({
     resizeChartCanvas,
     candles,
     activeIndicators,
+    indicatorScrollOffset = 0,
     chartHoverPoint,
     currentChartInterval,
     priceScaleZoom = 1,
     formatChartTime,
     setChartStatus,
 }) => {
-    if (!chartCanvas) return;
+    if (!chartCanvas) return null;
 
     const canvas = resizeChartCanvas();
-    if (!canvas) return;
+    if (!canvas) return null;
 
     const { ctx, width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
 
     if (!candles.length) {
         setChartStatus('표시할 차트 데이터가 없습니다.');
-        return;
+        return null;
     }
 
     setChartStatus('');
@@ -33,21 +34,28 @@ export const drawStockChart = ({
     const lowerIndicators = activeIndicators.filter((indicator) => {
         return getIndicatorDefinition(indicator.key)?.panel === 'lower';
     });
-    const indicatorPanelHeight = lowerIndicators.length
-        ? Math.max(58, Math.min(78, Math.floor(height * 0.12)))
-        : 0;
+    const indicatorPanelHeight = 72;
     const totalIndicatorHeight = lowerIndicators.length * indicatorPanelHeight;
-    const volumeHeight = Math.floor(height * 0.16);
+    const volumeHeight = Math.max(72, Math.min(112, Math.floor(height * 0.16)));
     const chartSectionGap = 24;
     const panelGap = 10;
     const volumeTop = height - padding.bottom - volumeHeight;
-    const firstLowerPanelTop = volumeTop - panelGap - totalIndicatorHeight;
-    const priceBottom = (lowerIndicators.length ? firstLowerPanelTop : volumeTop) - chartSectionGap;
+    const minPriceHeight = Math.max(170, Math.floor(height * 0.34));
+    const preferredLowerViewportHeight = lowerIndicators.length
+        ? Math.min(Math.floor(height * 0.42), totalIndicatorHeight)
+        : 0;
+    const maxLowerViewportHeight = Math.max(0, volumeTop - panelGap - chartSectionGap - padding.top - minPriceHeight);
+    const lowerViewportHeight = Math.min(preferredLowerViewportHeight, maxLowerViewportHeight);
+    const lowerViewportTop = volumeTop - panelGap - lowerViewportHeight;
+    const lowerViewportBottom = lowerViewportTop + lowerViewportHeight;
+    const priceBottom = (lowerIndicators.length ? lowerViewportTop : volumeTop) - chartSectionGap;
     const plotWidth = width - padding.left - padding.right;
     const priceHeight = priceBottom - padding.top;
     if (plotWidth <= 0 || priceHeight <= 0) {
-        return;
+        return null;
     }
+    const maxIndicatorScrollOffset = Math.max(0, totalIndicatorHeight - lowerViewportHeight);
+    const safeIndicatorScrollOffset = Math.max(0, Math.min(maxIndicatorScrollOffset, indicatorScrollOffset));
     const closes = candles.map((candle) => candle.close);
     const overlaySeriesForScale = [];
 
@@ -219,6 +227,7 @@ export const drawStockChart = ({
         closes,
         bodyWidth,
         xForIndex,
+        yForPrice,
         drawSeriesLine,
     };
 
@@ -236,9 +245,18 @@ export const drawStockChart = ({
         ctx.fillRect(x - bodyWidth / 2, height - padding.bottom - volumeHeightPx, bodyWidth, volumeHeightPx);
     });
 
+    if (lowerIndicators.length) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, lowerViewportTop, width, lowerViewportHeight);
+        ctx.clip();
+    }
+
     lowerIndicators.forEach((indicator, panelIndex) => {
-        const top = firstLowerPanelTop + indicatorPanelHeight * panelIndex;
+        const top = lowerViewportTop + indicatorPanelHeight * panelIndex - safeIndicatorScrollOffset;
         const bottom = top + indicatorPanelHeight - 8;
+        if (bottom < lowerViewportTop || top > lowerViewportBottom) return;
+
         const panel = {
             top,
             bottom,
@@ -260,6 +278,22 @@ export const drawStockChart = ({
         });
     });
 
+    if (lowerIndicators.length) {
+        ctx.restore();
+
+        if (maxIndicatorScrollOffset > 0) {
+            const trackTop = lowerViewportTop + 4;
+            const trackHeight = Math.max(24, lowerViewportHeight - 8);
+            const thumbHeight = Math.max(24, (lowerViewportHeight / totalIndicatorHeight) * trackHeight);
+            const thumbTop = trackTop + (safeIndicatorScrollOffset / maxIndicatorScrollOffset) * (trackHeight - thumbHeight);
+
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+            ctx.fillRect(width - 12, trackTop, 4, trackHeight);
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+            ctx.fillRect(width - 12, thumbTop, 4, thumbHeight);
+        }
+    }
+
     const first = candles[0]?.time || '';
     const last = candles[candles.length - 1]?.time || '';
     ctx.fillStyle = '#64748b';
@@ -267,7 +301,21 @@ export const drawStockChart = ({
     ctx.fillText(formatChartTime(first, currentChartInterval, true), padding.left, height - 16);
     ctx.fillText(formatChartTime(last, currentChartInterval, true), Math.max(padding.left, width - padding.right - 96), height - 16);
 
-    if (!chartHoverPoint) return;
+    const layout = {
+        priceTop: padding.top,
+        priceBottom,
+        lowerViewportTop,
+        lowerViewportBottom,
+        lowerViewportHeight,
+        volumeTop,
+        volumeBottom: height - padding.bottom,
+        totalIndicatorHeight,
+        indicatorPanelHeight,
+        indicatorScrollOffset: safeIndicatorScrollOffset,
+        maxIndicatorScrollOffset,
+    };
+
+    if (!chartHoverPoint) return layout;
 
     const hoverX = Math.max(padding.left, Math.min(width - padding.right, chartHoverPoint.x));
     const hoverY = Math.max(padding.top, Math.min(height - padding.bottom, chartHoverPoint.y));
@@ -328,4 +376,6 @@ export const drawStockChart = ({
         background: '#0f172a',
         color: '#f8fafc',
     });
+
+    return layout;
 };

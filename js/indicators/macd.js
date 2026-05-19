@@ -1,4 +1,4 @@
-import { getIndicatorNumber, movingAverage } from './utils.js';
+import { getIndicatorColor, getIndicatorNumber, movingAverage } from './utils.js';
 
 const calculateMacd = (closes, fast, slow, signal) => {
     const fastEma = movingAverage(closes, fast, 'ema');
@@ -25,12 +25,20 @@ export default {
         { key: 'fast', label: '단기 EMA', type: 'number', value: 12 },
         { key: 'slow', label: '장기 EMA', type: 'number', value: 26 },
         { key: 'signal', label: 'Signal', type: 'number', value: 9 },
+        { key: 'macdColor', label: 'MACD선 색상', type: 'color', value: '#f97316' },
+        { key: 'signalColor', label: 'Signal선 색상', type: 'color', value: '#38bdf8' },
+        { key: 'positiveColor', label: '양봉 막대 색상', type: 'color', value: '#ef4444' },
+        { key: 'negativeColor', label: '음봉 막대 색상', type: 'color', value: '#3b82f6' },
     ],
     drawPanel(indicator, context) {
         const { ctx, closes, panel, drawSeriesLine, width, padding, bodyWidth, xForIndex } = context;
         const fast = getIndicatorNumber(indicator, 'fast', 12);
         const slow = getIndicatorNumber(indicator, 'slow', 26);
         const signal = getIndicatorNumber(indicator, 'signal', 9);
+        const macdColor = getIndicatorColor(indicator, 'macdColor', '#f97316');
+        const signalColor = getIndicatorColor(indicator, 'signalColor', '#38bdf8');
+        const positiveColor = getIndicatorColor(indicator, 'positiveColor', '#ef4444');
+        const negativeColor = getIndicatorColor(indicator, 'negativeColor', '#3b82f6');
         const macdData = calculateMacd(closes, fast, slow, signal);
         const allValues = [macdData.macd, macdData.signalLine, macdData.histogram]
             .flat()
@@ -51,17 +59,16 @@ export default {
             if (!Number.isFinite(value)) return;
             const x = xForIndex(index);
             const y = yForValue(value);
-            ctx.fillStyle = value >= 0 ? 'rgba(239, 68, 68, 0.45)' : 'rgba(59, 130, 246, 0.45)';
+            ctx.fillStyle = value >= 0 ? positiveColor : negativeColor;
             ctx.fillRect(x - bodyWidth / 2, Math.min(y, zeroY), bodyWidth, Math.max(1, Math.abs(zeroY - y)));
         });
 
-        drawSeriesLine(macdData.macd, '#f97316', 1.4, yForValue);
-        drawSeriesLine(macdData.signalLine, '#38bdf8', 1.4, yForValue);
-        ctx.fillStyle = '#e2e8f0';
+        drawSeriesLine(macdData.macd, macdColor, 1.4, yForValue);
+        drawSeriesLine(macdData.signalLine, signalColor, 1.4, yForValue);
+        ctx.fillStyle = macdColor;
         ctx.fillText(`MACD ${fast}/${slow}/${signal}`, padding.left + 4, panel.top + 14);
         ctx.fillStyle = '#cbd5e1';
         ctx.fillText(maxMacd.toFixed(1), width - padding.right + 8, panel.top + 12);
         ctx.fillText(minMacd.toFixed(1), width - padding.right + 8, panel.bottom + 4);
     },
 };
-

@@ -141,6 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let priceScaleDragStartY = 0;
     let priceScaleDragStartZoom = 1;
     let priceScaleZoom = 1;
+    let lowerIndicatorScrollOffset = 0;
+    let latestChartLayout = null;
     let chartHoverPoint = null;
     let chartRedrawFrame = null;
     let realtimeSource = null;
@@ -173,6 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
             key: definition.key,
             values: Object.fromEntries(definition.fields.map((field) => [field.key, field.value])),
         };
+    };
+
+    const isIndicatorActive = (key) => {
+        return activeIndicators.some((indicator) => indicator.key === key);
+    };
+
+    const dedupeIndicatorsByKey = (indicators = []) => {
+        const seenKeys = new Set();
+        return indicators.filter((indicator) => {
+            if (!indicator?.key || seenKeys.has(indicator.key)) return false;
+            seenKeys.add(indicator.key);
+            return true;
+        });
     };
 
     const setRightPanel = (panelName = 'indicator') => {
@@ -882,9 +897,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const getMatchingIndicatorDefinitions = (query = '') => {
         const normalized = String(query || '').trim().toLowerCase();
-        if (!normalized) return indicatorDefinitions;
+        const availableDefinitions = indicatorDefinitions.filter((definition) => !isIndicatorActive(definition.key));
+        if (!normalized) return availableDefinitions;
 
-        return indicatorDefinitions.filter((definition) => {
+        return availableDefinitions.filter((definition) => {
             return definition.name.toLowerCase().includes(normalized)
                 || definition.aliases.some((alias) => alias.toLowerCase().includes(normalized));
         });
@@ -907,7 +923,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </button>
                 `;
             }).join('')
-            : '<div class="indicator-empty">지원하는 보조지표가 없습니다.</div>';
+            : '<div class="indicator-empty">추가할 보조지표가 없습니다.</div>';
 
         indicatorSearchDropdown.classList.remove('hidden');
     };
@@ -952,6 +968,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
 
+                    if (field.type === 'color') {
+                        return `
+                            <div class="indicator-field indicator-color-field">
+                                <label>${field.label}</label>
+                                <input type="color" value="${value}" data-indicator-id="${indicator.id}" data-field-key="${field.key}">
+                            </div>
+                        `;
+                    }
+
                     return `
                         <div class="indicator-field">
                             <label>${field.label}</label>
@@ -979,7 +1004,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const setActiveIndicatorsFromStrategy = (strategy) => {
         if (strategyNameInput) strategyNameInput.value = strategy.name;
         setStrategyMessage('');
-        activeIndicators = strategy.indicators.map((indicator) => {
+        activeIndicators = dedupeIndicatorsByKey(strategy.indicators).map((indicator) => {
             return {
                 id: `${indicator.key}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
                 key: indicator.key,
@@ -993,10 +1018,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const addIndicatorByQuery = () => {
         const definition = findIndicatorDefinition(indicatorSearchInput?.value);
         if (!definition || !indicatorSearchInput) return;
+        if (isIndicatorActive(definition.key)) {
+            setStrategyMessage('이미 추가된 보조지표입니다.');
+            indicatorSearchInput.value = '';
+            hideIndicatorDropdown();
+            return;
+        }
 
         activeIndicators.push(cloneIndicatorFromDefinition(definition));
         indicatorSearchInput.value = '';
         hideIndicatorDropdown();
+        setStrategyMessage('');
         renderIndicatorCards();
         redrawLatestChart();
     };
@@ -1004,10 +1036,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const addIndicatorByKey = (key) => {
         const definition = getIndicatorDefinition(key);
         if (!definition) return;
+        if (isIndicatorActive(definition.key)) {
+            setStrategyMessage('이미 추가된 보조지표입니다.');
+            if (indicatorSearchInput) indicatorSearchInput.value = '';
+            hideIndicatorDropdown();
+            return;
+        }
 
         activeIndicators.push(cloneIndicatorFromDefinition(definition));
         if (indicatorSearchInput) indicatorSearchInput.value = '';
         hideIndicatorDropdown();
+        setStrategyMessage('');
         renderIndicatorCards();
         redrawLatestChart();
     };
@@ -1104,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const nextIndex = savedIndicatorStrategies.length + 1;
             const strategy = {
                 name: strategyName || selectedStrategy?.name || `새 전략 ${nextIndex}`,
-                indicators: activeIndicators.map((indicator) => ({
+                indicators: dedupeIndicatorsByKey(activeIndicators).map((indicator) => ({
                     key: indicator.key,
                     values: { ...indicator.values },
                 })),
@@ -1505,17 +1544,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const redrawLatestChart = () => {
         chartRedrawFrame = null;
         if (document.body.classList.contains('compact-sidebar-open')) return;
-        drawStockChart({
+        latestChartLayout = drawStockChart({
             chartCanvas,
             resizeChartCanvas,
             candles: getVisibleCandles(),
             activeIndicators,
+            indicatorScrollOffset: lowerIndicatorScrollOffset,
             chartHoverPoint,
             currentChartInterval,
             priceScaleZoom,
             formatChartTime,
             setChartStatus,
         });
+
+        if (latestChartLayout) {
+            lowerIndicatorScrollOffset = latestChartLayout.indicatorScrollOffset;
+        } else {
+            lowerIndicatorScrollOffset = 0;
+        }
     };
 
     const requestChartRedraw = () => {
@@ -1536,8 +1582,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const isInPriceAxisArea = (x, width, y = 0, height = Infinity) => {
         const priceAxisWidth = 64;
-        const priceAreaBottomLimit = height * 0.72;
+        const priceAreaBottomLimit = latestChartLayout?.priceBottom ?? height * 0.72;
         return x >= width - priceAxisWidth && y <= priceAreaBottomLimit;
+    };
+
+    const isInLowerIndicatorArea = (y) => {
+        return latestChartLayout
+            && latestChartLayout.maxIndicatorScrollOffset > 0
+            && y >= latestChartLayout.lowerViewportTop
+            && y <= latestChartLayout.lowerViewportBottom;
+    };
+
+    const scrollLowerIndicators = (deltaY) => {
+        if (!latestChartLayout?.maxIndicatorScrollOffset) return false;
+
+        lowerIndicatorScrollOffset += deltaY;
+        lowerIndicatorScrollOffset = Math.max(
+            0,
+            Math.min(latestChartLayout.maxIndicatorScrollOffset, lowerIndicatorScrollOffset),
+        );
+        requestChartRedraw();
+        return true;
     };
 
     const zoomChart = (direction) => {
@@ -2025,6 +2090,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (chartCanvas) {
         chartCanvas.addEventListener('wheel', (event) => {
             event.preventDefault();
+            const rect = chartCanvas.getBoundingClientRect();
+            const mouseY = event.clientY - rect.top;
+            if (isInLowerIndicatorArea(mouseY) && scrollLowerIndicators(event.deltaY)) {
+                return;
+            }
+
             zoomChart(event.deltaY < 0 ? 'in' : 'out');
         }, { passive: false });
 
@@ -2034,7 +2105,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const mouseY = event.clientY - rect.top;
 
             if (!isChartDragging && !isPriceScaleDragging) {
-                chartCanvas.style.cursor = isInPriceAxisArea(mouseX, rect.width, mouseY, rect.height) ? 'ns-resize' : 'grab';
+                if (isInPriceAxisArea(mouseX, rect.width, mouseY, rect.height)) {
+                    chartCanvas.style.cursor = 'ns-resize';
+                } else if (isInLowerIndicatorArea(mouseY)) {
+                    chartCanvas.style.cursor = 'default';
+                } else {
+                    chartCanvas.style.cursor = 'grab';
+                }
             }
 
             if (isChartDragging || isPriceScaleDragging) return;
@@ -2178,4 +2255,3 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-

@@ -26,6 +26,11 @@ export const getIndicatorNumber = (indicator, key, fallback) => {
     return Number.isFinite(value) && value > 0 ? value : fallback;
 };
 
+export const getIndicatorColor = (indicator, key, fallback) => {
+    const value = normalizeIndicatorValues(indicator.key, indicator.values)[key];
+    return /^#[0-9a-f]{6}$/i.test(String(value || '')) ? value : fallback;
+};
+
 export const movingAverage = (values, period, type = 'sma') => {
     const length = values.length;
     const result = Array(length).fill(null);
@@ -54,4 +59,3 @@ export const movingAverage = (values, period, type = 'sma') => {
 
     return result;
 };
-

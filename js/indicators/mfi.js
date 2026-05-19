@@ -1,4 +1,4 @@
-import { getIndicatorNumber, normalizeIndicatorValues } from './utils.js';
+import { getIndicatorColor, getIndicatorNumber, normalizeIndicatorValues } from './utils.js';
 
 const calculateMfi = (candles, period) => {
     const result = Array(candles.length).fill(null);
@@ -37,6 +37,9 @@ export default {
         { key: 'period', label: '기간', type: 'number', value: 14 },
         { key: 'lower', label: '하단값', type: 'number', value: 20 },
         { key: 'upper', label: '상단값', type: 'number', value: 80 },
+        { key: 'lineColor', label: 'MFI선 색상', type: 'color', value: '#10b981' },
+        { key: 'upperColor', label: '상단선 색상', type: 'color', value: '#f87171' },
+        { key: 'lowerColor', label: '하단선 색상', type: 'color', value: '#60a5fa' },
     ],
     drawPanel(indicator, context) {
         const { ctx, candles, panel, drawSeriesLine, width, padding } = context;
@@ -44,13 +47,16 @@ export default {
         const period = getIndicatorNumber(indicator, 'period', 14);
         const lower = Number(values.lower ?? 20);
         const upper = Number(values.upper ?? 80);
+        const lineColor = getIndicatorColor(indicator, 'lineColor', '#10b981');
+        const upperColor = getIndicatorColor(indicator, 'upperColor', '#f87171');
+        const lowerColor = getIndicatorColor(indicator, 'lowerColor', '#60a5fa');
         const series = calculateMfi(candles, period);
         const yForValue = (value) => panel.bottom - (Math.max(0, Math.min(100, value)) / 100) * panel.height;
 
         [upper, lower].forEach((level) => {
             const y = yForValue(level);
             ctx.setLineDash([4, 4]);
-            ctx.strokeStyle = level >= 50 ? 'rgba(248, 113, 113, 0.75)' : 'rgba(96, 165, 250, 0.75)';
+            ctx.strokeStyle = level >= 50 ? upperColor : lowerColor;
             ctx.beginPath();
             ctx.moveTo(padding.left, y);
             ctx.lineTo(width - padding.right, y);
@@ -60,9 +66,8 @@ export default {
             ctx.fillText(String(level), width - padding.right + 8, y + 4);
         });
 
-        drawSeriesLine(series, '#10b981', 1.5, yForValue);
-        ctx.fillStyle = '#e2e8f0';
+        drawSeriesLine(series, lineColor, 1.5, yForValue);
+        ctx.fillStyle = lineColor;
         ctx.fillText(`MFI ${period}`, padding.left + 4, panel.top + 14);
     },
 };
-

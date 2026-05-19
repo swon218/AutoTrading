@@ -72,6 +72,15 @@ function normalizeStrategyName(name) {
     return String(name || '').replace(/\s+/g, '').toLowerCase();
 }
 
+function dedupeIndicatorsByKey(indicators = []) {
+    const seenKeys = new Set();
+    return indicators.filter((indicator) => {
+        if (!indicator?.key || seenKeys.has(indicator.key)) return false;
+        seenKeys.add(indicator.key);
+        return true;
+    });
+}
+
 function getIndicatorStrategies() {
     const db = getDatabase();
     return db.prepare(`
@@ -83,7 +92,7 @@ function getIndicatorStrategies() {
 
 function createIndicatorStrategy(payload) {
     const name = String(payload.name || '').trim();
-    const indicators = Array.isArray(payload.indicators) ? payload.indicators : [];
+    const indicators = dedupeIndicatorsByKey(Array.isArray(payload.indicators) ? payload.indicators : []);
 
     if (!name) throw new Error('Strategy name is required.');
     if (!indicators.length) throw new Error('At least one indicator is required.');
@@ -109,7 +118,7 @@ function createIndicatorStrategy(payload) {
 
 function updateIndicatorStrategy(id, payload) {
     const name = String(payload.name || '').trim();
-    const indicators = Array.isArray(payload.indicators) ? payload.indicators : [];
+    const indicators = dedupeIndicatorsByKey(Array.isArray(payload.indicators) ? payload.indicators : []);
 
     if (!name) throw new Error('Strategy name is required.');
     if (!indicators.length) throw new Error('At least one indicator is required.');

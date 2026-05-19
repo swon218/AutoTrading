@@ -1,4 +1,4 @@
-import { getIndicatorNumber, normalizeIndicatorValues } from './utils.js';
+import { getIndicatorColor, getIndicatorNumber, normalizeIndicatorValues } from './utils.js';
 
 const calculateRsi = (closes, period) => {
     const result = Array(closes.length).fill(null);
@@ -39,6 +39,9 @@ export default {
         { key: 'period', label: '기간', type: 'number', value: 14 },
         { key: 'lower', label: '하단값', type: 'number', value: 30 },
         { key: 'upper', label: '상단값', type: 'number', value: 70 },
+        { key: 'lineColor', label: 'RSI선 색상', type: 'color', value: '#f59e0b' },
+        { key: 'upperColor', label: '상단선 색상', type: 'color', value: '#f87171' },
+        { key: 'lowerColor', label: '하단선 색상', type: 'color', value: '#60a5fa' },
     ],
     drawPanel(indicator, context) {
         const { ctx, closes, panel, drawSeriesLine, width, padding } = context;
@@ -46,13 +49,16 @@ export default {
         const period = getIndicatorNumber(indicator, 'period', 14);
         const lower = Number(values.lower ?? 30);
         const upper = Number(values.upper ?? 70);
+        const lineColor = getIndicatorColor(indicator, 'lineColor', '#f59e0b');
+        const upperColor = getIndicatorColor(indicator, 'upperColor', '#f87171');
+        const lowerColor = getIndicatorColor(indicator, 'lowerColor', '#60a5fa');
         const series = calculateRsi(closes, period);
         const yForValue = (value) => panel.bottom - (Math.max(0, Math.min(100, value)) / 100) * panel.height;
 
         [upper, lower].forEach((level) => {
             const y = yForValue(level);
             ctx.setLineDash([4, 4]);
-            ctx.strokeStyle = level >= 50 ? 'rgba(248, 113, 113, 0.75)' : 'rgba(96, 165, 250, 0.75)';
+            ctx.strokeStyle = level >= 50 ? upperColor : lowerColor;
             ctx.beginPath();
             ctx.moveTo(padding.left, y);
             ctx.lineTo(width - padding.right, y);
@@ -62,9 +68,8 @@ export default {
             ctx.fillText(String(level), width - padding.right + 8, y + 4);
         });
 
-        drawSeriesLine(series, '#f59e0b', 1.5, yForValue);
-        ctx.fillStyle = '#e2e8f0';
+        drawSeriesLine(series, lineColor, 1.5, yForValue);
+        ctx.fillStyle = lineColor;
         ctx.fillText(`RSI ${period}`, padding.left + 4, panel.top + 14);
     },
 };
-

@@ -1,4 +1,4 @@
-import { getIndicatorNumber, movingAverage } from './utils.js';
+import { getIndicatorColor, getIndicatorNumber, movingAverage } from './utils.js';
 
 const calculateBollingerBands = (closes, period, deviation) => {
     const middle = movingAverage(closes, period, 'sma');
@@ -27,6 +27,8 @@ export default {
     fields: [
         { key: 'period', label: '기간', type: 'number', value: 20 },
         { key: 'deviation', label: '표준편차', type: 'number', value: 2 },
+        { key: 'bandColor', label: '밴드 색상', type: 'color', value: '#a855f7' },
+        { key: 'middleColor', label: '중심선 색상', type: 'color', value: '#cbd5e1' },
     ],
     getScaleSeries(indicator, candles) {
         const closes = candles.map((candle) => candle.close);
@@ -41,15 +43,16 @@ export default {
         const { ctx, closes, drawSeriesLine, padding } = context;
         const period = getIndicatorNumber(indicator, 'period', 20);
         const deviation = getIndicatorNumber(indicator, 'deviation', 2);
+        const bandColor = getIndicatorColor(indicator, 'bandColor', '#a855f7');
+        const middleColor = getIndicatorColor(indicator, 'middleColor', '#cbd5e1');
         const bands = calculateBollingerBands(closes, period, deviation);
 
-        drawSeriesLine(bands.upper, 'rgba(168, 85, 247, 0.95)', 1.2);
-        drawSeriesLine(bands.middle, 'rgba(203, 213, 225, 0.65)', 1.1);
-        drawSeriesLine(bands.lower, 'rgba(168, 85, 247, 0.95)', 1.2);
+        drawSeriesLine(bands.upper, bandColor, 1.2);
+        drawSeriesLine(bands.middle, middleColor, 1.1);
+        drawSeriesLine(bands.lower, bandColor, 1.2);
 
-        ctx.fillStyle = '#c4b5fd';
+        ctx.fillStyle = bandColor;
         ctx.font = '11px Noto Sans KR, sans-serif';
         ctx.fillText(`BB ${period}/${deviation}`, padding.left + 4, padding.top + 30);
     },
 };
-

@@ -1660,6 +1660,22 @@ body.overflow-hidden {
     padding: 0 0.5rem;
 }
 
+.indicator-color-field input[type="color"] {
+    cursor: pointer;
+    width: 2rem;
+    height: 2rem;
+    padding: 0.15rem;
+}
+
+.indicator-color-field input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.indicator-color-field input[type="color"]::-webkit-color-swatch {
+    border: 0;
+    border-radius: 0.2rem;
+}
+
 .indicator-strategy-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
