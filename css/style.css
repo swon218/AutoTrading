@@ -2000,8 +2000,8 @@ body.overflow-hidden {
 }
 
 .account-menu {
-    position: absolute;
-    top: calc(100% + 0.5rem);
+    position: fixed;
+    top: 3.9rem;
     right: 1.5rem;
     z-index: 2400;
     display: flex;
