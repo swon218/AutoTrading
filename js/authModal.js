@@ -169,6 +169,10 @@ document.addEventListener('DOMContentLoaded', () => {
         accountButton.focus();
     };
 
+    const reloadAfterAuthChange = () => {
+        window.location.reload();
+    };
+
     accountButton.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -190,6 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
             accountLogoutButton.disabled = true;
             await signOut();
             updateAccountButton(null);
+            reloadAfterAuthChange();
         } catch (error) {
             openAuthModal('login');
             setAuthMessage(error.message || '\uB85C\uADF8\uC544\uC6C3\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.', 'error');
@@ -220,6 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await signInWithEmail({ email, password });
             updateAccountButton(data.user);
             closeAuthModal();
+            reloadAfterAuthChange();
         } catch (error) {
             setAuthMessage(getFriendlyAuthError(error, '\uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'), 'error');
         } finally {
@@ -248,6 +254,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.session) {
                 updateAccountButton(data.user);
                 closeAuthModal();
+                reloadAfterAuthChange();
                 return;
             }
 
