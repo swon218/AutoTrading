@@ -8,8 +8,10 @@ const TOKEN_REFRESH_BUFFER_MS = 10 * 60 * 1000;
 const KIWOOM_TERMINAL_AUTH_GUIDE = '키움 REST API 지정단말기 인증 실패입니다. PC/서버의 공인 IP가 바뀐 경우 키움증권 홈페이지 REST API 메뉴에서 현재 IP 주소를 추가하거나 변경하세요.';
 
 let tokenCache = {
-    token: '',
-    expiresAt: 0,
+    default: {
+        token: '',
+        expiresAt: 0,
+    },
 };
 
 function loadDotEnv() {
@@ -39,7 +41,16 @@ function loadFastPyKeys() {
     return { appkey, secretkey };
 }
 
-function getKiwoomConfig() {
+function getKiwoomConfig(credentials = null) {
+    if (credentials?.appkey && credentials?.secretkey) {
+        return {
+            appkey: credentials.appkey,
+            secretkey: credentials.secretkey,
+            host: REAL_HOST,
+            wsHost: REAL_WS_HOST,
+        };
+    }
+
     loadDotEnv();
     const fastPyKeys = loadFastPyKeys();
 
@@ -91,13 +102,20 @@ function formatTokenIssue(payload) {
     return `토큰 발급 실패: ${rawPayload}${guide}`;
 }
 
-async function getAccessToken() {
+function getTokenCacheKey(credentials = null) {
+    if (!credentials?.appkey) return 'default';
+    return `user:${credentials.appkey.slice(0, 8)}:${credentials.appkey.length}`;
+}
+
+async function getAccessToken(credentials = null) {
     const now = Date.now();
-    if (tokenCache.token && tokenCache.expiresAt - TOKEN_REFRESH_BUFFER_MS > now) {
-        return tokenCache.token;
+    const cacheKey = getTokenCacheKey(credentials);
+    const cached = tokenCache[cacheKey] || { token: '', expiresAt: 0 };
+    if (cached.token && cached.expiresAt - TOKEN_REFRESH_BUFFER_MS > now) {
+        return cached.token;
     }
 
-    const { appkey, secretkey, host } = getKiwoomConfig();
+    const { appkey, secretkey, host } = getKiwoomConfig(credentials);
     const payload = await requestKiwoomJson(
         `${host}/oauth2/token`,
         { 'Content-Type': 'application/json;charset=UTF-8' },
@@ -112,17 +130,17 @@ async function getAccessToken() {
         throw new Error(formatTokenIssue(payload));
     }
 
-    tokenCache = {
+    tokenCache[cacheKey] = {
         token: payload.token,
         expiresAt: parseKiwoomDateTime(payload.expires_dt) || now + 60 * 60 * 1000,
     };
 
-    return tokenCache.token;
+    return tokenCache[cacheKey].token;
 }
 
-async function requestKiwoomTr(apiId, body, endpoint = '/api/dostk/stkinfo') {
-    const { host } = getKiwoomConfig();
-    const token = await getAccessToken();
+async function requestKiwoomTr(apiId, body, endpoint = '/api/dostk/stkinfo', credentials = null) {
+    const { host } = getKiwoomConfig(credentials);
+    const token = await getAccessToken(credentials);
 
     const payload = await requestKiwoomJson(
         `${host}${endpoint}`,
@@ -138,11 +156,11 @@ async function requestKiwoomTr(apiId, body, endpoint = '/api/dostk/stkinfo') {
 
     const message = String(payload.return_msg || payload.message || '');
     if (message.includes('Token') || message.includes('토큰')) {
-        tokenCache = {
+        tokenCache[getTokenCacheKey(credentials)] = {
             token: '',
             expiresAt: 0,
         };
-        const freshToken = await getAccessToken();
+        const freshToken = await getAccessToken(credentials);
 
         return requestKiwoomJson(
             `${host}${endpoint}`,

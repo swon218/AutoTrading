@@ -21,6 +21,7 @@ const {
 const { getHomeRanking } = require('./backend/rankings');
 const { getStockInfo, resolveStockCode, searchStocks } = require('./backend/stocks');
 const { subscribeRealtime } = require('./backend/realtime');
+const { getKiwoomCredentialsForRequest, saveUserApiCredentials } = require('./backend/userCredentials');
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -99,7 +100,7 @@ const server = http.createServer(async (request, response) => {
     const stockMatch = requestUrl.pathname.match(/^\/api\/stock\/(.+)$/);
     const chartMatch = requestUrl.pathname.match(/^\/api\/chart\/(.+)$/);
     const realtimeMatch = requestUrl.pathname.match(/^\/api\/realtime\/(.+)$/);
-    const strategyMatch = requestUrl.pathname.match(/^\/api\/indicator-strategies\/(\d+)$/);
+    const strategyMatch = requestUrl.pathname.match(/^\/api\/indicator-strategies\/([^/]+)$/);
 
     if (request.method === 'GET' && requestUrl.pathname === '/api/health') {
         sendJson(response, 200, { ok: true });
@@ -109,10 +110,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && requestUrl.pathname === '/api/search') {
         try {
             const query = requestUrl.searchParams.get('q') || '';
-            const results = await searchStocks(query);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const results = await searchStocks(query, 10, credentials);
             sendJson(response, 200, { results });
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
@@ -121,39 +123,43 @@ const server = http.createServer(async (request, response) => {
         try {
             const type = requestUrl.searchParams.get('type') || 'realtime';
             const limit = requestUrl.searchParams.get('limit') || '10';
-            const ranking = await getHomeRanking(type, limit);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const ranking = await getHomeRanking(type, limit, credentials);
             sendJson(response, 200, ranking);
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
 
     if (request.method === 'GET' && requestUrl.pathname === '/api/indicator-strategies') {
         try {
-            sendJson(response, 200, { strategies: getIndicatorStrategies() });
+            const strategies = await getIndicatorStrategies(request, requestUrl);
+            sendJson(response, 200, { strategies });
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
 
     if (request.method === 'GET' && requestUrl.pathname === '/api/account/orderable-cash') {
         try {
-            const account = await getOrderableCash();
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const account = await getOrderableCash(credentials);
             sendJson(response, 200, account);
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
 
     if (request.method === 'GET' && requestUrl.pathname === '/api/account/portfolio') {
         try {
-            const portfolio = await getPortfolio();
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const portfolio = await getPortfolio(credentials);
             sendJson(response, 200, portfolio);
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
@@ -161,10 +167,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && requestUrl.pathname === '/api/account/holding') {
         try {
             const stockCode = requestUrl.searchParams.get('code') || '';
-            const holding = await getStockHolding(stockCode);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const holding = await getStockHolding(stockCode, credentials);
             sendJson(response, 200, holding);
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
@@ -172,11 +179,22 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'POST' && requestUrl.pathname === '/api/indicator-strategies') {
         try {
             const payload = await parseRequestBody(request);
-            const strategy = createIndicatorStrategy(payload);
+            const strategy = await createIndicatorStrategy(request, payload, requestUrl);
             sendJson(response, 201, strategy);
         } catch (error) {
             const statusCode = error.message === 'Strategy name already exists.' ? 409 : 400;
-            sendJson(response, statusCode, { message: error.message });
+            sendJson(response, error.statusCode || statusCode, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/user-api-credentials') {
+        try {
+            const payload = await parseRequestBody(request);
+            const result = await saveUserApiCredentials(request, payload);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, { message: error.message });
         }
         return;
     }
@@ -184,10 +202,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'POST' && requestUrl.pathname === '/api/order') {
         try {
             const payload = await parseRequestBody(request);
-            const order = await placeStockOrder(payload);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const order = await placeStockOrder(payload, credentials);
             sendJson(response, 200, order);
         } catch (error) {
-            sendJson(response, 400, { message: error.message });
+            sendJson(response, error.statusCode || 400, { message: error.message });
         }
         return;
     }
@@ -195,10 +214,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'POST' && requestUrl.pathname === '/api/order/modify') {
         try {
             const payload = await parseRequestBody(request);
-            const order = await modifyStockOrder(payload);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const order = await modifyStockOrder(payload, credentials);
             sendJson(response, 200, order);
         } catch (error) {
-            sendJson(response, 400, { message: error.message });
+            sendJson(response, error.statusCode || 400, { message: error.message });
         }
         return;
     }
@@ -206,10 +226,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'POST' && requestUrl.pathname === '/api/order/cancel') {
         try {
             const payload = await parseRequestBody(request);
-            const order = await cancelStockOrder(payload);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const order = await cancelStockOrder(payload, credentials);
             sendJson(response, 200, order);
         } catch (error) {
-            sendJson(response, 400, { message: error.message });
+            sendJson(response, error.statusCode || 400, { message: error.message });
         }
         return;
     }
@@ -217,10 +238,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && requestUrl.pathname === '/api/orders/pending') {
         try {
             const stockCode = requestUrl.searchParams.get('code') || '';
-            const orders = await getPendingOrders(stockCode);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const orders = await getPendingOrders(stockCode, credentials);
             sendJson(response, 200, { orders });
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
@@ -228,24 +250,24 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'PUT' && strategyMatch) {
         try {
             const payload = await parseRequestBody(request);
-            const strategy = updateIndicatorStrategy(strategyMatch[1], payload);
+            const strategy = await updateIndicatorStrategy(request, strategyMatch[1], payload, requestUrl);
             sendJson(response, 200, strategy);
         } catch (error) {
             const statusCode = error.message === 'Strategy not found.'
                 ? 404
                 : error.message === 'Strategy name already exists.' ? 409 : 400;
-            sendJson(response, statusCode, { message: error.message });
+            sendJson(response, error.statusCode || statusCode, { message: error.message });
         }
         return;
     }
 
     if (request.method === 'DELETE' && strategyMatch) {
         try {
-            deleteIndicatorStrategy(strategyMatch[1]);
+            await deleteIndicatorStrategy(request, strategyMatch[1], requestUrl);
             sendJson(response, 200, { ok: true });
         } catch (error) {
             const statusCode = error.message === 'Strategy not found.' ? 404 : 400;
-            sendJson(response, statusCode, { message: error.message });
+            sendJson(response, error.statusCode || statusCode, { message: error.message });
         }
         return;
     }
@@ -253,11 +275,12 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && stockMatch) {
         try {
             const query = decodeURIComponent(stockMatch[1]);
-            const code = await resolveStockCode(query);
-            const stock = await getStockInfo(code);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const code = await resolveStockCode(query, credentials);
+            const stock = await getStockInfo(code, credentials);
             sendJson(response, 200, stock);
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
@@ -266,17 +289,23 @@ const server = http.createServer(async (request, response) => {
         try {
             const query = decodeURIComponent(chartMatch[1]);
             const interval = requestUrl.searchParams.get('interval') || '1';
-            const chart = await getChartData(query, interval);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const chart = await getChartData(query, interval, credentials);
             sendJson(response, 200, chart);
         } catch (error) {
-            sendJson(response, 500, { message: error.message });
+            sendJson(response, error.statusCode || 500, { message: error.message });
         }
         return;
     }
 
     if (request.method === 'GET' && realtimeMatch) {
-        const query = decodeURIComponent(realtimeMatch[1]);
-        await subscribeRealtime(request, response, query);
+        try {
+            const query = decodeURIComponent(realtimeMatch[1]);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            await subscribeRealtime(request, response, query, credentials);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
         return;
     }
 

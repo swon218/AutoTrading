@@ -1,3 +1,5 @@
+import { authFetch } from './apiClient.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const sidebarToggle = document.getElementById('sidebarToggle');
     const appSidebar = document.getElementById('appSidebar');
@@ -125,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         try {
             renderSearchMessage('검색 중...');
-            const response = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`, { cache: 'no-store' });
+            const response = await authFetch(`/api/search?q=${encodeURIComponent(keyword)}`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
             renderSearchResults(payload.results || []);
@@ -279,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('계좌 보유종목을 불러오는 중...', true);
 
         try {
-            const response = await fetch('/api/account/portfolio', {
+            const response = await authFetch('/api/account/portfolio', {
                 cache: 'no-store',
                 signal: portfolioAbortController.signal,
             });
@@ -310,7 +312,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setStatus('미체결 주문을 불러오는 중...', true);
 
         try {
-            const response = await fetch('/api/orders/pending', {
+            const response = await authFetch('/api/orders/pending', {
                 cache: 'no-store',
                 signal: pendingAbortController.signal,
             });

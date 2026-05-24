@@ -90,14 +90,14 @@ const normalizePendingOrder = (order) => {
     };
 };
 
-async function getPendingOrders(stockCode = '') {
+async function getPendingOrders(stockCode = '', credentials = null) {
     const normalizedStockCode = normalizeStockCode(stockCode);
     const payload = await requestKiwoomTr('ka10075', {
         all_stk_tp: normalizedStockCode ? '1' : '0',
         trde_tp: '0',
         stk_cd: normalizedStockCode,
         stex_tp: '0',
-    }, ACCOUNT_ENDPOINT);
+    }, ACCOUNT_ENDPOINT, credentials);
 
     const returnCode = Number(payload.return_code ?? 0);
     if (returnCode !== 0) {
@@ -114,7 +114,7 @@ async function getPendingOrders(stockCode = '') {
         });
 }
 
-async function placeStockOrder(payload = {}) {
+async function placeStockOrder(payload = {}, credentials = null) {
     const action = payload.action === 'sell' ? 'sell' : payload.action === 'buy' ? 'buy' : '';
     const priceMode = payload.priceMode === 'market' ? 'market' : 'limit';
     const stockCode = normalizeStockCode(payload.stockCode);
@@ -141,7 +141,7 @@ async function placeStockOrder(payload = {}) {
 
     let result;
     try {
-        result = await requestKiwoomTr(ORDER_API_IDS[action], body, ORDER_ENDPOINT);
+        result = await requestKiwoomTr(ORDER_API_IDS[action], body, ORDER_ENDPOINT, credentials);
     } catch (error) {
         throw new Error(normalizeOrderRejectionMessage(error, action));
     }
@@ -164,7 +164,7 @@ async function placeStockOrder(payload = {}) {
     };
 }
 
-async function modifyStockOrder(payload = {}) {
+async function modifyStockOrder(payload = {}, credentials = null) {
     const originalOrderNo = normalizeText(payload.orderNo || payload.originalOrderNo);
     const stockCode = normalizeStockCode(payload.stockCode);
     const quantity = normalizeInteger(payload.quantity);
@@ -185,7 +185,7 @@ async function modifyStockOrder(payload = {}) {
         mdfy_qty: String(quantity),
         mdfy_uv: String(price),
         mdfy_cond_uv: '',
-    }, ORDER_ENDPOINT);
+    }, ORDER_ENDPOINT, credentials);
 
     const returnCode = Number(result.return_code ?? 0);
     if (returnCode !== 0) {
@@ -203,7 +203,7 @@ async function modifyStockOrder(payload = {}) {
     };
 }
 
-async function cancelStockOrder(payload = {}) {
+async function cancelStockOrder(payload = {}, credentials = null) {
     const originalOrderNo = normalizeText(payload.orderNo || payload.originalOrderNo);
     const stockCode = normalizeStockCode(payload.stockCode);
     const quantity = normalizeInteger(payload.quantity);
@@ -220,7 +220,7 @@ async function cancelStockOrder(payload = {}) {
         orig_ord_no: originalOrderNo,
         stk_cd: stockCode,
         cncl_qty: String(quantity),
-    }, ORDER_ENDPOINT);
+    }, ORDER_ENDPOINT, credentials);
 
     const returnCode = Number(result.return_code ?? 0);
     if (returnCode !== 0) {

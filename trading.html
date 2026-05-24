@@ -51,19 +51,57 @@
     </div>
     
     <div class="flex items-center space-x-6 ml-auto">
-        <div class="relative">
-            <button id="profileBtn" class="flex items-center space-x-2 focus:outline-none">
-                <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" class="w-8 h-8 rounded-full">
-                <span class="text-sm font-medium text-white">서재원 님</span>
-                <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
-            </button>
-            <div id="profileMenu" class="hidden absolute right-0 mt-2 w-40 bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50">
-                <a href="profile-edit.html" class="block px-4 py-3 text-sm text-slate-300 hover:bg-slate-700">회원정보 수정</a>
-                <a href="#" class="block px-4 py-3 text-sm text-red-400 hover:bg-slate-700 border-t border-slate-700">로그아웃</a>
-            </div>
-        </div>
+        <button id="profileBtn" type="button" class="login-trigger" aria-haspopup="dialog" aria-controls="authModal">
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+            <span>로그인</span>
+        </button>
     </div>
 </header>
+
+    <div id="authModal" class="auth-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <div class="auth-modal-card">
+            <button id="authModalClose" type="button" class="auth-modal-close" aria-label="로그인 창 닫기">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            <div class="auth-modal-icon">
+                <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
+            </div>
+            <h2 id="authModalTitle">로그인</h2>
+            <form class="auth-login-form" data-auth-panel="login">
+                <label class="auth-field">
+                    <span>아이디</span>
+                    <input type="text" name="loginId" autocomplete="username" placeholder="아이디를 입력하세요">
+                </label>
+                <label class="auth-field">
+                    <span>패스워드</span>
+                    <input type="password" name="password" autocomplete="current-password" placeholder="패스워드를 입력하세요">
+                </label>
+                <button type="submit" class="auth-submit-button">로그인</button>
+                <p class="auth-switch-text">
+                    <button id="authSignupLink" type="button">회원가입</button>
+                </p>
+            </form>
+            <form class="auth-login-form hidden" data-auth-panel="signup">
+                <label class="auth-field">
+                    <span>아이디</span>
+                    <input type="text" name="signupId" autocomplete="username" placeholder="아이디를 입력하세요">
+                </label>
+                <label class="auth-field">
+                    <span>패스워드</span>
+                    <input type="password" name="signupPassword" autocomplete="new-password" placeholder="패스워드를 입력하세요">
+                </label>
+                <label class="auth-field">
+                    <span>닉네임</span>
+                    <input type="text" name="nickname" autocomplete="nickname" placeholder="닉네임을 입력하세요">
+                </label>
+                <button type="submit" class="auth-submit-button">회원가입</button>
+                <p class="auth-switch-text">
+                    <span>이미 계정이 있나요?</span>
+                    <button id="authLoginLink" type="button">로그인</button>
+                </p>
+            </form>
+        </div>
+    </div>
 
     <div class="app-content flex flex-1 overflow-hidden">
        
@@ -186,6 +224,7 @@
 
                     <div class="indicator-strategy-actions">
                         <button id="indicatorResetButton" type="button" class="indicator-reset-button">초기화</button>
+                        <button id="indicatorDeleteButton" type="button" class="indicator-delete-button">삭제</button>
                         <button id="indicatorSaveButton" type="button" class="indicator-save-button">저장</button>
                     </div>
                 </div>
@@ -278,6 +317,7 @@
 
     </div>
 
+    <script type="module" src="js/authModal.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

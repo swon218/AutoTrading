@@ -83,8 +83,8 @@ function aggregateIntradayCandles(candles, intervalMinutes) {
     return Array.from(buckets.values());
 }
 
-async function getChartData(query, interval = '1') {
-    const code = await resolveStockCode(query);
+async function getChartData(query, interval = '1', credentials = null) {
+    const code = await resolveStockCode(query, credentials);
     const normalizedInterval = ['1', '5', '15', '60', '120', 'day', 'week', 'month'].includes(interval) ? interval : '1';
     const requestInterval = ['60', '120'].includes(normalizedInterval) ? '15' : normalizedInterval;
     const aggregateMinutes = ['60', '120'].includes(normalizedInterval) ? Number(normalizedInterval) : null;
@@ -101,7 +101,7 @@ async function getChartData(query, interval = '1') {
         ? { stk_cd: code, base_dt: todayYmd(), upd_stkpc_tp: '1' }
         : { stk_cd: code, tic_scope: requestInterval, upd_stkpc_tp: '1' };
 
-    const payload = await requestKiwoomTr(apiId, body, '/api/dostk/chart');
+    const payload = await requestKiwoomTr(apiId, body, '/api/dostk/chart', credentials);
 
     if (payload.return_code !== 0) {
         throw new Error(payload.return_msg || `Chart request failed: ${JSON.stringify(payload)}`);

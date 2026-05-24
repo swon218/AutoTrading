@@ -1,3 +1,5 @@
+import { authFetch } from './apiClient.js';
+
 document.addEventListener('DOMContentLoaded', () => {
     const sidebarToggle = document.getElementById('sidebarToggle');
     const appSidebar = document.getElementById('appSidebar');
@@ -131,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             renderSearchMessage('검색 중...');
-            const response = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`, {
+            const response = await authFetch(`/api/search?q=${encodeURIComponent(keyword)}`, {
                 cache: 'no-store',
             });
 
@@ -279,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rankingAbortController = new AbortController();
 
         try {
-            const response = await fetch(`/api/home-rankings?type=${encodeURIComponent(type)}&limit=20`, {
+            const response = await authFetch(`/api/home-rankings?type=${encodeURIComponent(type)}&limit=20`, {
                 cache: 'no-store',
                 signal: rankingAbortController.signal,
             });

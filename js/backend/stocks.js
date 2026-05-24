@@ -39,8 +39,8 @@ function toStockDto(payload, code) {
     };
 }
 
-async function getStockInfo(code) {
-    const payload = await requestKiwoomTr('ka10001', { stk_cd: code });
+async function getStockInfo(code, credentials = null) {
+    const payload = await requestKiwoomTr('ka10001', { stk_cd: code }, '/api/dostk/stkinfo', credentials);
 
     if (payload.return_code !== 0) {
         throw new Error(payload.return_msg || `종목 조회 실패: ${JSON.stringify(payload)}`);
@@ -58,7 +58,7 @@ function normalizeStockItem(item) {
     return { code, name };
 }
 
-async function getStockList() {
+async function getStockList(credentials = null) {
     const now = Date.now();
     if (stockListCache.items.length && stockListCache.expiresAt > now) {
         return stockListCache.items;
@@ -69,7 +69,7 @@ async function getStockList() {
 
     for (const mrktTp of marketTypes) {
         try {
-            const payload = await requestKiwoomTr('ka10099', { mrkt_tp: mrktTp });
+            const payload = await requestKiwoomTr('ka10099', { mrkt_tp: mrktTp }, '/api/dostk/stkinfo', credentials);
             const list = Array.isArray(payload.list) ? payload.list : [];
 
             for (const item of list) {
@@ -97,12 +97,12 @@ async function getStockList() {
     return uniqueStocks;
 }
 
-async function searchStocks(query, limit = 10) {
+async function searchStocks(query, limit = 10, credentials = null) {
     const keyword = String(query || '').trim();
     if (!keyword) return [];
 
     const normalizedKeyword = keyword.toLowerCase();
-    const stocks = await getStockList();
+    const stocks = await getStockList(credentials);
 
     return stocks
         .filter((stock) => stock.code.includes(keyword) || stock.name.toLowerCase().includes(normalizedKeyword))
@@ -120,13 +120,13 @@ async function searchStocks(query, limit = 10) {
         .slice(0, limit);
 }
 
-async function resolveStockCode(query) {
+async function resolveStockCode(query, credentials = null) {
     const keyword = String(query || '').trim();
     if (/^\d{6}$/.test(keyword)) {
         return keyword;
     }
 
-    const results = await searchStocks(keyword, 1);
+    const results = await searchStocks(keyword, 1, credentials);
     if (!results.length) {
         throw new Error(`No stock found: ${keyword}`);
     }

@@ -119,12 +119,12 @@ const RANKING_TYPES = {
     },
 };
 
-async function requestRankingItems(type, limit, bodyOverride = {}) {
+async function requestRankingItems(type, limit, bodyOverride = {}, credentials = null) {
     const config = RANKING_TYPES[type] || RANKING_TYPES.realtime;
     const payload = await requestKiwoomTr(config.apiId, {
         ...config.body,
         ...bodyOverride,
-    }, config.endpoint);
+    }, config.endpoint, credentials);
 
     if (payload.return_code !== 0) {
         throw new Error(payload.return_msg || `Ranking request failed: ${JSON.stringify(payload)}`);
@@ -270,12 +270,12 @@ function normalizeForeignInstitutionItems(rows, limit) {
     return items;
 }
 
-async function getHomeRanking(type = 'realtime', limit = 10) {
+async function getHomeRanking(type = 'realtime', limit = 10, credentials = null) {
     const normalizedLimit = Math.max(1, Math.min(Number(limit) || 10, 30));
     if (type === 'movers') {
         const [gainers, losers] = await Promise.all([
-            requestRankingItems('gainers', normalizedLimit),
-            requestRankingItems('losers', normalizedLimit),
+            requestRankingItems('gainers', normalizedLimit, {}, credentials),
+            requestRankingItems('losers', normalizedLimit, {}, credentials),
         ]);
 
         return {
@@ -294,7 +294,7 @@ async function getHomeRanking(type = 'realtime', limit = 10) {
 
     if (type === 'foreignInstitutionTop') {
         const config = RANKING_TYPES.foreignInstitutionTop;
-        const payload = await requestKiwoomTr(config.apiId, config.body, config.endpoint);
+        const payload = await requestKiwoomTr(config.apiId, config.body, config.endpoint, credentials);
 
         if (payload.return_code !== 0) {
             throw new Error(payload.return_msg || `Ranking request failed: ${JSON.stringify(payload)}`);
@@ -311,7 +311,7 @@ async function getHomeRanking(type = 'realtime', limit = 10) {
     }
 
     const config = RANKING_TYPES[type] || RANKING_TYPES.realtime;
-    const items = await requestRankingItems(type, normalizedLimit);
+    const items = await requestRankingItems(type, normalizedLimit, {}, credentials);
 
     return {
         type,

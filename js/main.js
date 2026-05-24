@@ -4,6 +4,7 @@ import {
     indicatorDefinitions,
     normalizeIndicatorValues,
 } from './indicators/registry.js';
+import { authFetch, createAuthenticatedEventSource } from './apiClient.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const mainWrap = document.querySelector('.main_m');
@@ -100,6 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const indicatorAddButton = document.getElementById('indicatorAddButton');
     const indicatorCards = document.getElementById('indicatorCards');
     const indicatorResetButton = document.getElementById('indicatorResetButton');
+    const indicatorDeleteButton = document.getElementById('indicatorDeleteButton');
     const indicatorSaveButton = document.getElementById('indicatorSaveButton');
     const rightPanelTabs = document.querySelectorAll('[data-panel-tab]');
     const indicatorPanel = document.getElementById('indicatorPanel');
@@ -369,7 +371,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 renderPendingOrders([]);
                 return;
             }
-            const response = await fetch(`/api/orders/pending?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
+            const response = await authFetch(`/api/orders/pending?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
             renderPendingOrders(payload.orders || []);
@@ -449,7 +451,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setHoldingSummary({ priceText: '조회 중...', quantityText: '조회 중...' });
         try {
-            const response = await fetch(`/api/account/holding?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
+            const response = await authFetch(`/api/account/holding?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
             if (requestId !== holdingRequestId) return;
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
@@ -480,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setOrderableCashText('조회 중...');
         try {
-            const response = await fetch('/api/account/orderable-cash', { cache: 'no-store' });
+            const response = await authFetch('/api/account/orderable-cash', { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
 
@@ -611,7 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setOrderMessage('주문을 전송하는 중입니다...');
 
         try {
-            const response = await fetch('/api/order', {
+            const response = await authFetch('/api/order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -729,7 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
             button.disabled = true;
             setOrderMessage('취소 주문을 전송하는 중입니다...');
             try {
-                const response = await fetch('/api/order/cancel', {
+                const response = await authFetch('/api/order/cancel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -760,7 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
         button.disabled = true;
         setOrderMessage('정정 주문을 전송하는 중입니다...');
         try {
-            const response = await fetch('/api/order/modify', {
+            const response = await authFetch('/api/order/modify', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -792,48 +794,25 @@ document.addEventListener('DOMContentLoaded', () => {
         return values[field.key] ?? field.value;
     };
 
-    const getSavedStrategyDefaults = () => {
-        return [
-            {
-                id: 'preset-1',
-                name: '1번',
-                indicators: [
-                    { key: 'rsi', values: { period: 14, lower: 30, upper: 70 } },
-                ],
-            },
-            {
-                id: 'preset-2',
-                name: '2번',
-                indicators: [
-                    { key: 'rsi', values: { period: 14, lower: 30, upper: 70 } },
-                    { key: 'ma', values: { maType: 'sma', short: 5, long: 20 } },
-                ],
-            },
-            {
-                id: 'preset-a',
-                name: 'A전략',
-                indicators: [
-                    { key: 'bollinger', values: { period: 20, deviation: 2 } },
-                    { key: 'macd', values: { fast: 12, slow: 26, signal: 9 } },
-                ],
-            },
-        ];
-    };
-
     const loadSavedIndicatorStrategies = async () => {
         try {
-            const response = await fetch('/api/indicator-strategies', { cache: 'no-store' });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const response = await authFetch('/api/indicator-strategies', { cache: 'no-store' });
+            if (!response.ok) {
+                const errorPayload = await response.json().catch(() => ({}));
+                throw new Error(errorPayload.message || `HTTP ${response.status}`);
+            }
 
             const payload = await response.json();
-            return payload.strategies?.length ? payload.strategies : getSavedStrategyDefaults();
-        } catch {
-            return getSavedStrategyDefaults();
+            return Array.isArray(payload.strategies) ? payload.strategies : [];
+        } catch (error) {
+            console.warn('Saved indicator strategies request failed.', error);
+            setStrategyMessage('저장한 전략을 불러오지 못했습니다.');
+            return [];
         }
     };
 
     const createSavedIndicatorStrategy = async (strategy) => {
-        const response = await fetch('/api/indicator-strategies', {
+        const response = await authFetch('/api/indicator-strategies', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
             body: JSON.stringify(strategy),
@@ -848,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateSavedIndicatorStrategy = async (id, strategy) => {
-        const response = await fetch(`/api/indicator-strategies/${encodeURIComponent(id)}`, {
+        const response = await authFetch(`/api/indicator-strategies/${encodeURIComponent(id)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json; charset=utf-8' },
             body: JSON.stringify(strategy),
@@ -860,6 +839,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         return response.json();
+    };
+
+    const deleteSavedIndicatorStrategy = async (id) => {
+        const response = await authFetch(`/api/indicator-strategies/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            const errorPayload = await response.json().catch(() => ({}));
+            throw new Error(errorPayload.message || `HTTP ${response.status}`);
+        }
     };
 
     const renderSavedStrategyOptions = () => {
@@ -887,8 +877,9 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(strategyNameInput?.value || '').trim();
     };
 
+    const normalizeStrategyName = (value) => String(value || '').replace(/\s+/g, '').toLowerCase();
+
     const isDuplicateStrategyName = (name, currentId = '') => {
-        const normalizeStrategyName = (value) => String(value || '').replace(/\s+/g, '').toLowerCase();
         const normalized = normalizeStrategyName(name);
         return savedIndicatorStrategies.some((strategy) => {
             return strategy.id !== currentId && normalizeStrategyName(strategy.name) === normalized;
@@ -1124,8 +1115,38 @@ document.addEventListener('DOMContentLoaded', () => {
             redrawLatestChart();
         });
 
+        indicatorDeleteButton?.addEventListener('click', () => {
+            const selectedStrategy = getSelectedStrategy();
+            if (!selectedStrategy) {
+                setStrategyMessage('삭제할 전략을 선택하세요.');
+                return;
+            }
+
+            indicatorDeleteButton.disabled = true;
+            deleteSavedIndicatorStrategy(selectedStrategy.id)
+                .then(() => {
+                    savedIndicatorStrategies = savedIndicatorStrategies.filter((strategy) => strategy.id !== selectedStrategy.id);
+                    renderSavedStrategyOptions();
+                    if (savedStrategySelect) savedStrategySelect.value = '';
+                    if (strategyNameInput) strategyNameInput.value = selectedStrategy.name;
+                    setStrategyMessage('전략을 삭제했습니다. 현재 설정은 다시 저장할 수 있습니다.');
+                    renderIndicatorCards();
+                    redrawLatestChart();
+                })
+                .catch((error) => {
+                    console.error('Indicator strategy delete failed.', error);
+                    setStrategyMessage(error.message || '전략을 삭제하지 못했습니다.');
+                })
+                .finally(() => {
+                    indicatorDeleteButton.disabled = false;
+                });
+        });
+
         indicatorSaveButton?.addEventListener('click', () => {
-            if (!activeIndicators.length) return;
+            if (!activeIndicators.length) {
+                setStrategyMessage('저장할 보조지표를 먼저 추가하세요.');
+                return;
+            }
 
             const selectedStrategyId = savedStrategySelect?.value || '';
             const selectedStrategy = getSelectedStrategy();
@@ -1149,7 +1170,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 })),
             };
 
-            const canUpdateSelectedStrategy = selectedStrategy && !String(selectedStrategy.id).startsWith('preset-');
+            const canUpdateSelectedStrategy = selectedStrategy
+                && !String(selectedStrategy.id).startsWith('preset-')
+                && normalizeStrategyName(selectedStrategy.name) === normalizeStrategyName(strategyName);
             const saveRequest = canUpdateSelectedStrategy
                 ? updateSavedIndicatorStrategy(selectedStrategy.id, strategy)
                 : createSavedIndicatorStrategy(strategy);
@@ -1171,6 +1194,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.error('Indicator strategy save failed.', error);
                     if (error.message === 'Strategy name already exists.') {
                         setStrategyMessage('이미 존재하는 전략명입니다.');
+                    } else {
+                        setStrategyMessage(error.message || '전략을 저장하지 못했습니다.');
                     }
                 });
         });
@@ -1676,7 +1701,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 setChartStatus('');
             }
-            const response = await fetch(`/api/chart/${encodeURIComponent(code)}?interval=${encodeURIComponent(requestInterval)}`, {
+            const response = await authFetch(`/api/chart/${encodeURIComponent(code)}?interval=${encodeURIComponent(requestInterval)}`, {
                 cache: 'no-store',
             });
 
@@ -1849,7 +1874,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setDirectionClass(stockEls.change, tick.direction || 'flat');
     };
 
-    const startRealtime = (code) => {
+    const startRealtime = async (code) => {
         if (!code) return;
 
         if (realtimeSource) {
@@ -1857,7 +1882,7 @@ document.addEventListener('DOMContentLoaded', () => {
             realtimeSource = null;
         }
 
-        realtimeSource = new EventSource(`/api/realtime/${encodeURIComponent(code)}`);
+        realtimeSource = await createAuthenticatedEventSource(`/api/realtime/${encodeURIComponent(code)}`);
 
         realtimeSource.addEventListener('tick', (event) => {
             const tick = JSON.parse(event.data);
@@ -1880,7 +1905,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (showLoading) {
                 setLoadingView();
             }
-            const response = await fetch(`/api/stock/${encodeURIComponent(keyword)}`, {
+            const response = await authFetch(`/api/stock/${encodeURIComponent(keyword)}`, {
                 cache: 'no-store',
             });
 
@@ -1956,7 +1981,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             renderSearchMessage('검색 중...');
-            const response = await fetch(`/api/search?q=${encodeURIComponent(keyword)}`, {
+            const response = await authFetch(`/api/search?q=${encodeURIComponent(keyword)}`, {
                 cache: 'no-store',
             });
 

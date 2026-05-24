@@ -1,68 +1,16 @@
-//지표 전략 저장/수정/삭제
-
-const fs = require('fs');
-const { DatabaseSync } = require('node:sqlite');
-const { DATA_DIR, DB_PATH } = require('./config');
-
-const DEFAULT_INDICATOR_STRATEGIES = [
-    {
-        name: '1번',
-        indicators: [
-            { key: 'rsi', values: { period: 14, lower: 30, upper: 70 } },
-        ],
-    },
-    {
-        name: '2번',
-        indicators: [
-            { key: 'rsi', values: { period: 14, lower: 30, upper: 70 } },
-            { key: 'ma', values: { maType: 'sma', short: 5, long: 20 } },
-        ],
-    },
-    {
-        name: 'A전략',
-        indicators: [
-            { key: 'bollinger', values: { period: 20, deviation: 2 } },
-            { key: 'macd', values: { fast: 12, slow: 26, signal: 9 } },
-        ],
-    },
-];
-
-let database = null;
-
-function getDatabase() {
-    if (database) return database;
-
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-    database = new DatabaseSync(DB_PATH);
-    database.exec(`
-        CREATE TABLE IF NOT EXISTS indicator_strategies (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            config_json TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
-
-    const strategyCount = database.prepare('SELECT COUNT(*) AS count FROM indicator_strategies').get().count;
-    if (!strategyCount) {
-        const insert = database.prepare(`
-            INSERT INTO indicator_strategies (name, config_json)
-            VALUES (?, ?)
-        `);
-        for (const strategy of DEFAULT_INDICATOR_STRATEGIES) {
-            insert.run(strategy.name, JSON.stringify(strategy.indicators));
-        }
-    }
-
-    return database;
-}
+const {
+    getAuthenticatedSupabaseUser,
+    getBackendSupabaseConfig,
+    requestSupabaseJson,
+} = require('./userCredentials');
 
 function strategyRowToDto(row) {
     return {
         id: String(row.id),
         name: row.name,
-        indicators: JSON.parse(row.config_json),
+        indicators: Array.isArray(row.config_json?.indicators)
+            ? row.config_json.indicators
+            : Array.isArray(row.config_json) ? row.config_json : [],
         createdAt: row.created_at,
         updatedAt: row.updated_at,
     };
@@ -81,74 +29,116 @@ function dedupeIndicatorsByKey(indicators = []) {
     });
 }
 
-function getIndicatorStrategies() {
-    const db = getDatabase();
-    return db.prepare(`
-        SELECT id, name, config_json, created_at, updated_at
-        FROM indicator_strategies
-        ORDER BY id ASC
-    `).all().map(strategyRowToDto);
-}
-
-function createIndicatorStrategy(payload) {
+function validateStrategyPayload(payload) {
     const name = String(payload.name || '').trim();
     const indicators = dedupeIndicatorsByKey(Array.isArray(payload.indicators) ? payload.indicators : []);
 
     if (!name) throw new Error('Strategy name is required.');
     if (!indicators.length) throw new Error('At least one indicator is required.');
 
-    const db = getDatabase();
-    const duplicate = db.prepare('SELECT id, name FROM indicator_strategies').all()
-        .find((strategy) => normalizeStrategyName(strategy.name) === normalizeStrategyName(name));
-    if (duplicate) throw new Error('Strategy name already exists.');
-
-    const result = db.prepare(`
-        INSERT INTO indicator_strategies (name, config_json)
-        VALUES (?, ?)
-    `).run(name, JSON.stringify(indicators));
-
-    const row = db.prepare(`
-        SELECT id, name, config_json, created_at, updated_at
-        FROM indicator_strategies
-        WHERE id = ?
-    `).get(result.lastInsertRowid);
-
-    return strategyRowToDto(row);
+    return { name, indicators };
 }
 
-function updateIndicatorStrategy(id, payload) {
-    const name = String(payload.name || '').trim();
-    const indicators = dedupeIndicatorsByKey(Array.isArray(payload.indicators) ? payload.indicators : []);
-
-    if (!name) throw new Error('Strategy name is required.');
-    if (!indicators.length) throw new Error('At least one indicator is required.');
-
-    const db = getDatabase();
-    const duplicate = db.prepare('SELECT id, name FROM indicator_strategies WHERE id != ?').all(id)
-        .find((strategy) => normalizeStrategyName(strategy.name) === normalizeStrategyName(name));
-    if (duplicate) throw new Error('Strategy name already exists.');
-
-    const result = db.prepare(`
-        UPDATE indicator_strategies
-        SET name = ?, config_json = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    `).run(name, JSON.stringify(indicators), id);
-
-    if (!result.changes) throw new Error('Strategy not found.');
-
-    const row = db.prepare(`
-        SELECT id, name, config_json, created_at, updated_at
-        FROM indicator_strategies
-        WHERE id = ?
-    `).get(id);
-
-    return strategyRowToDto(row);
+function getStrategyHeaders(config) {
+    return {
+        apikey: config.serviceKey,
+        Authorization: `Bearer ${config.serviceKey}`,
+        'Content-Type': 'application/json',
+    };
 }
 
-function deleteIndicatorStrategy(id) {
-    const db = getDatabase();
-    const result = db.prepare('DELETE FROM indicator_strategies WHERE id = ?').run(id);
-    if (!result.changes) throw new Error('Strategy not found.');
+async function getUserStrategyRows(userId, config) {
+    return requestSupabaseJson(
+        `${config.url}/rest/v1/strategies?user_id=eq.${encodeURIComponent(userId)}&select=id,name,config_json,created_at,updated_at&order=created_at.asc`,
+        {
+            headers: getStrategyHeaders(config),
+        },
+    );
+}
+
+async function ensureUniqueStrategyName(userId, name, config, excludeId = '') {
+    const rows = await getUserStrategyRows(userId, config);
+    const duplicate = rows.find((strategy) => {
+        return String(strategy.id) !== String(excludeId)
+            && normalizeStrategyName(strategy.name) === normalizeStrategyName(name);
+    });
+
+    if (duplicate) throw new Error('Strategy name already exists.');
+}
+
+async function getIndicatorStrategies(request, requestUrl = null) {
+    const config = getBackendSupabaseConfig();
+    const user = await getAuthenticatedSupabaseUser(request, requestUrl);
+    const rows = await getUserStrategyRows(user.id, config);
+    return rows.map(strategyRowToDto);
+}
+
+async function createIndicatorStrategy(request, payload, requestUrl = null) {
+    const config = getBackendSupabaseConfig();
+    const user = await getAuthenticatedSupabaseUser(request, requestUrl);
+    const { name, indicators } = validateStrategyPayload(payload);
+
+    await ensureUniqueStrategyName(user.id, name, config);
+
+    const rows = await requestSupabaseJson(`${config.url}/rest/v1/strategies?select=id,name,config_json,created_at,updated_at`, {
+        method: 'POST',
+        headers: {
+            ...getStrategyHeaders(config),
+            Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+            user_id: user.id,
+            name,
+            config_json: { indicators },
+            is_active: true,
+        }),
+    });
+
+    return strategyRowToDto(rows[0]);
+}
+
+async function updateIndicatorStrategy(request, id, payload, requestUrl = null) {
+    const config = getBackendSupabaseConfig();
+    const user = await getAuthenticatedSupabaseUser(request, requestUrl);
+    const { name, indicators } = validateStrategyPayload(payload);
+
+    await ensureUniqueStrategyName(user.id, name, config, id);
+
+    const rows = await requestSupabaseJson(
+        `${config.url}/rest/v1/strategies?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user.id)}&select=id,name,config_json,created_at,updated_at`,
+        {
+            method: 'PATCH',
+            headers: {
+                ...getStrategyHeaders(config),
+                Prefer: 'return=representation',
+            },
+            body: JSON.stringify({
+                name,
+                config_json: { indicators },
+                updated_at: new Date().toISOString(),
+            }),
+        },
+    );
+
+    if (!rows.length) throw new Error('Strategy not found.');
+    return strategyRowToDto(rows[0]);
+}
+
+async function deleteIndicatorStrategy(request, id, requestUrl = null) {
+    const config = getBackendSupabaseConfig();
+    const user = await getAuthenticatedSupabaseUser(request, requestUrl);
+    const rows = await requestSupabaseJson(
+        `${config.url}/rest/v1/strategies?id=eq.${encodeURIComponent(id)}&user_id=eq.${encodeURIComponent(user.id)}&select=id`,
+        {
+            method: 'DELETE',
+            headers: {
+                ...getStrategyHeaders(config),
+                Prefer: 'return=representation',
+            },
+        },
+    );
+
+    if (!rows.length) throw new Error('Strategy not found.');
 }
 
 module.exports = {

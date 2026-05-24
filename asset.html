@@ -51,7 +51,7 @@
 
         <div class="flex items-center space-x-6 ml-auto">
             <div class="relative">
-                <button id="profileBtn" class="flex items-center space-x-2 focus:outline-none">
+                <button id="profileBtn" class="login-trigger" type="button" aria-haspopup="dialog" aria-controls="authModal">
                     <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" class="w-8 h-8 rounded-full">
                     <span class="text-sm font-medium text-white">서재원 님</span>
                     <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
@@ -157,6 +157,7 @@
         </main>
     </div>
 
-    <script src="js/asset.js"></script>
+    <script type="module" src="js/authModal.js"></script>
+    <script type="module" src="js/asset.js"></script>
 </body>
 </html>

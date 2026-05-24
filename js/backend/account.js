@@ -102,8 +102,8 @@ function normalizeHoldingItem(item = {}) {
     };
 }
 
-async function getOrderableCash() {
-    const payload = await requestKiwoomTr('kt00001', { qry_tp: '3' }, ACCOUNT_ENDPOINT);
+async function getOrderableCash(credentials = null) {
+    const payload = await requestKiwoomTr('kt00001', { qry_tp: '3' }, ACCOUNT_ENDPOINT, credentials);
     const hasErrorCode = payload.return_code !== undefined && payload.return_code !== null && payload.return_code !== '';
     const returnCode = Number(payload.return_code);
     if (hasErrorCode && Number.isFinite(returnCode) && returnCode !== 0) {
@@ -130,7 +130,7 @@ async function getOrderableCash() {
     };
 }
 
-async function getStockHolding(stockCode = '') {
+async function getStockHolding(stockCode = '', credentials = null) {
     const normalizedStockCode = normalizeStockCode(stockCode);
     if (!normalizedStockCode) {
         throw new Error('보유 수량을 조회할 종목을 먼저 선택하세요.');
@@ -139,7 +139,7 @@ async function getStockHolding(stockCode = '') {
     const payload = await requestKiwoomTr('kt00018', {
         qry_tp: '1',
         dmst_stex_tp: 'KRX',
-    }, ACCOUNT_ENDPOINT);
+    }, ACCOUNT_ENDPOINT, credentials);
 
     const returnCode = Number(payload.return_code ?? 0);
     if (Number.isFinite(returnCode) && returnCode !== 0) {
@@ -165,11 +165,11 @@ async function getStockHolding(stockCode = '') {
     };
 }
 
-async function getPortfolio() {
+async function getPortfolio(credentials = null) {
     const payload = await requestKiwoomTr('kt00018', {
         qry_tp: '1',
         dmst_stex_tp: 'KRX',
-    }, ACCOUNT_ENDPOINT);
+    }, ACCOUNT_ENDPOINT, credentials);
 
     const returnCode = Number(payload.return_code ?? 0);
     if (Number.isFinite(returnCode) && returnCode !== 0) {
@@ -196,7 +196,7 @@ async function getPortfolio() {
 
     let cash = null;
     try {
-        cash = await getOrderableCash();
+        cash = await getOrderableCash(credentials);
     } catch {
         cash = null;
     }

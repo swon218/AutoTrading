@@ -112,7 +112,7 @@ function registerRealtimeCode(code) {
     });
 }
 
-async function connectKiwoomWebSocket(code = currentRealtimeCode) {
+async function connectKiwoomWebSocket(code = currentRealtimeCode, credentials = null) {
     if (typeof WebSocket === 'undefined') {
         throw new Error('현재 Node.js에서 WebSocket 클라이언트를 사용할 수 없습니다.');
     }
@@ -124,8 +124,8 @@ async function connectKiwoomWebSocket(code = currentRealtimeCode) {
         return;
     }
 
-    const { wsHost } = getKiwoomConfig();
-    const token = await getAccessToken();
+    const { wsHost } = getKiwoomConfig(credentials);
+    const token = await getAccessToken(credentials);
 
     kiwoomSocketReady = false;
     currentRealtimeCode = code || currentRealtimeCode;
@@ -165,7 +165,7 @@ async function connectKiwoomWebSocket(code = currentRealtimeCode) {
 
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(() => {
-            connectKiwoomWebSocket(currentRealtimeCode).catch((error) => {
+            connectKiwoomWebSocket(currentRealtimeCode, credentials).catch((error) => {
                 console.error('Kiwoom WebSocket reconnect failed:', error.message);
             });
         }, 3000);
@@ -176,7 +176,7 @@ async function connectKiwoomWebSocket(code = currentRealtimeCode) {
     });
 }
 
-async function subscribeRealtime(request, response, query) {
+async function subscribeRealtime(request, response, query, credentials = null) {
     response.writeHead(200, {
         'Content-Type': 'text/event-stream; charset=utf-8',
         'Cache-Control': 'no-cache, no-transform',
@@ -187,9 +187,9 @@ async function subscribeRealtime(request, response, query) {
     realtimeClients.add(response);
 
     try {
-        const code = await resolveStockCode(query);
+        const code = await resolveStockCode(query, credentials);
         sendRealtimeEvent(response, 'status', { connected: false, code });
-        await connectKiwoomWebSocket(code);
+        await connectKiwoomWebSocket(code, credentials);
         registerRealtimeCode(code);
     } catch (error) {
         sendRealtimeEvent(response, 'error', { message: error.message });
