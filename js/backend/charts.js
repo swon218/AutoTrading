@@ -9,6 +9,7 @@ const {
 } = require('./kiwoomUtils');
 
 const chartCache = new Map();
+const CHART_CANDLE_LIMIT = 500;
 const DAILY_CHART_INTERVALS = new Set(['day', 'week', 'month']);
 const CHART_API_BY_INTERVAL = {
     day: 'ka10081',
@@ -107,7 +108,8 @@ async function getChartData(query, interval = '1', credentials = null) {
         throw new Error(payload.return_msg || `Chart request failed: ${JSON.stringify(payload)}`);
     }
 
-    const rawCandles = getChartItems(payload, requestInterval)
+    const chartItems = getChartItems(payload, requestInterval);
+    const rawCandles = chartItems
         .map((item) => toCandle(item, requestInterval))
         .filter((candle) => {
             return candle.time && candle.open !== null && candle.high !== null
@@ -115,8 +117,14 @@ async function getChartData(query, interval = '1', credentials = null) {
         })
         .reverse();
 
-    const candles = (aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles)
-        .slice(-180);
+    const aggregatedCandles = aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles;
+    const candles = aggregatedCandles.slice(-CHART_CANDLE_LIMIT);
+
+    console.info(
+        `[chart] ${code} interval=${normalizedInterval} requestInterval=${requestInterval}`
+        + ` raw=${chartItems.length} valid=${rawCandles.length} aggregated=${aggregatedCandles.length}`
+        + ` returned=${candles.length} limit=${CHART_CANDLE_LIMIT}`,
+    );
 
     const data = {
         code,
