@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://pays-charts-hopes-says.trycloudflare.com"
+      "destination": "https://afterwards-suggestion-womens-therapeutic.trycloudflare.com"
     }
   ]
 }
