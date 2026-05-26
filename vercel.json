@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://within-intake-regard-combining.trycloudflare.com/api/:path*"
+      "destination": "https://believe-hygiene-sandra-allowing.trycloudflare.com/api/:path*"
     }
   ]
 }
