@@ -55,6 +55,34 @@ function filterCandlesByYears(candles, years) {
     return candles.filter((candle) => String(candle.time || '').slice(0, 10) >= cutoffDate);
 }
 
+function normalizeDate(value) {
+    const text = String(value || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    if (/^\d{8}$/.test(text)) {
+        return `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}`;
+    }
+    return '';
+}
+
+function filterCandlesByDateRange(candles, startDate, endDate) {
+    const start = normalizeDate(startDate);
+    const end = normalizeDate(endDate);
+
+    return candles.filter((candle) => {
+        const date = String(candle.time || '').slice(0, 10);
+        if (!date) return false;
+        if (start && date < start) return false;
+        if (end && date > end) return false;
+        return true;
+    });
+}
+
+function limitCandles(candles, limit) {
+    const count = Number(limit);
+    if (!Number.isFinite(count) || count <= 0) return candles;
+    return candles.slice(-Math.floor(count));
+}
+
 function toCandle(item, interval) {
     const timeSource = DAILY_CHART_INTERVALS.has(interval) ? item.dt : item.cntr_tm;
     return {
@@ -128,9 +156,13 @@ async function getChartData(query, interval = '1', credentials = null, options =
     const requestInterval = normalizedInterval === '120' ? '60' : normalizedInterval;
     const aggregateMinutes = normalizedInterval === '120' ? Number(normalizedInterval) : null;
     const years = Number(options.years) || 0;
+    const hasLimitOption = options.limit !== undefined && options.limit !== null && options.limit !== '';
+    const limit = hasLimitOption ? Number(options.limit) : CHART_CANDLE_LIMIT;
+    const startDate = normalizeDate(options.startDate);
+    const endDate = normalizeDate(options.endDate);
     const settled = Boolean(options.settled);
     const baseDate = settled && DAILY_CHART_INTERVALS.has(requestInterval) ? getSettledBaseDate() : todayYmd();
-    const cacheKey = `${code}:${normalizedInterval}:years=${years}:settled=${settled ? '1' : '0'}:base=${baseDate}`;
+    const cacheKey = `${code}:${normalizedInterval}:years=${years}:limit=${limit}:start=${startDate}:end=${endDate}:settled=${settled ? '1' : '0'}:base=${baseDate}`;
     const cached = chartCache.get(cacheKey);
     const now = Date.now();
 
@@ -158,11 +190,13 @@ async function getChartData(query, interval = '1', credentials = null, options =
         })
         .reverse();
 
-    const aggregatedCandles = filterCandlesByYears(
-        aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles,
-        years,
+    const aggregatedCandles = aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles;
+    const rangedCandles = filterCandlesByDateRange(
+        filterCandlesByYears(aggregatedCandles, years),
+        startDate,
+        endDate,
     );
-    const candles = aggregatedCandles.slice(-CHART_CANDLE_LIMIT);
+    const candles = limitCandles(rangedCandles, limit);
 
     const data = {
         code,

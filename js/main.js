@@ -97,6 +97,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedStrategySelect = document.getElementById('savedStrategySelect');
     const strategyNameInput = document.getElementById('strategyNameInput');
     const strategyNameMessage = document.getElementById('strategyNameMessage');
+    const chartPeriodStartInput = document.getElementById('chartPeriodStartInput');
+    const chartPeriodEndInput = document.getElementById('chartPeriodEndInput');
+    const chartPeriodApplyButton = document.getElementById('chartPeriodApplyButton');
+    const chartPeriodResetButton = document.getElementById('chartPeriodResetButton');
+    const chartPeriodMessage = document.getElementById('chartPeriodMessage');
     const indicatorSearchInput = document.getElementById('indicatorSearchInput');
     const indicatorSearchDropdown = document.getElementById('indicatorSearchDropdown');
     const indicatorAddButton = document.getElementById('indicatorAddButton');
@@ -107,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rightPanelTabs = document.querySelectorAll('[data-panel-tab]');
     const indicatorPanel = document.getElementById('indicatorPanel');
     const orderPanel = document.getElementById('orderPanel');
+    const periodPanel = document.getElementById('periodPanel');
     const orderForm = document.getElementById('orderForm');
     const orderActionButtons = document.querySelectorAll('[data-order-action]');
     const orderPriceButtons = document.querySelectorAll('[data-price-mode]');
@@ -132,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const isStaticStrategyChart = document.body.dataset.chartMode === 'strategy';
     const DEFAULT_CHART_INTERVAL = document.body.dataset.defaultChartInterval || '15';
     const chartHistoryYears = Number(document.body.dataset.chartYears) || 0;
+    const chartCandleLimit = Number(document.body.dataset.chartLimit) || 0;
     let currentChartInterval = DEFAULT_CHART_INTERVAL;
     let latestCandles = [];
     let latestCandlesInterval = null;
@@ -196,13 +203,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const setRightPanel = (panelName = 'indicator') => {
-        const isOrderPanel = panelName === 'order';
+        const panels = {
+            indicator: indicatorPanel,
+            order: orderPanel,
+            period: periodPanel,
+        };
+        const selectedPanel = panels[panelName] ? panelName : 'indicator';
+        const isOrderPanel = selectedPanel === 'order';
 
-        indicatorPanel?.classList.toggle('hidden', isOrderPanel);
-        orderPanel?.classList.toggle('hidden', !isOrderPanel);
+        Object.entries(panels).forEach(([name, panel]) => {
+            panel?.classList.toggle('hidden', name !== selectedPanel);
+        });
 
         rightPanelTabs.forEach((button) => {
-            const isActive = button.dataset.panelTab === panelName;
+            const isActive = button.dataset.panelTab === selectedPanel;
             button.classList.toggle('is-active', isActive);
             button.setAttribute('aria-selected', String(isActive));
         });
@@ -217,6 +231,27 @@ document.addEventListener('DOMContentLoaded', () => {
             setRightPanel(button.dataset.panelTab);
         });
     });
+
+    const setChartPeriodMessage = (message = '', type = 'info') => {
+        if (!chartPeriodMessage) return;
+        chartPeriodMessage.textContent = message;
+        chartPeriodMessage.classList.toggle('is-error', type === 'error');
+    };
+
+    const hasCustomChartPeriod = () => {
+        return Boolean(chartPeriodStartInput?.value || chartPeriodEndInput?.value);
+    };
+
+    const validateChartPeriod = () => {
+        const startDate = chartPeriodStartInput?.value || '';
+        const endDate = chartPeriodEndInput?.value || '';
+        if (startDate && endDate && startDate > endDate) {
+            setChartPeriodMessage('시작일은 종료일보다 늦을 수 없습니다.', 'error');
+            return false;
+        }
+        setChartPeriodMessage('');
+        return true;
+    };
 
     const parseOrderNumber = (value) => {
         const normalized = String(value || '').replace(/[^\d]/g, '');
@@ -1710,6 +1745,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (isStaticStrategyChart) {
                 params.set('settled', '1');
+                if (chartPeriodStartInput?.value) {
+                    params.set('startDate', chartPeriodStartInput.value);
+                }
+                if (chartPeriodEndInput?.value) {
+                    params.set('endDate', chartPeriodEndInput.value);
+                }
+                params.set('limit', hasCustomChartPeriod() ? '0' : String(chartCandleLimit || 500));
             }
 
             const response = await authFetch(`/api/chart/${encodeURIComponent(code)}?${params.toString()}`, {
@@ -2120,11 +2162,30 @@ document.addEventListener('DOMContentLoaded', () => {
             currentChartInterval = button.dataset.interval || '1';
             setActiveIntervalButton();
             updateChartUrl(currentStockCode);
+            if (isStaticStrategyChart && !validateChartPeriod()) return;
             fetchChart(currentStockCode, currentChartInterval);
             if (currentStockCode && !isStaticStrategyChart) {
                 startRealtime(currentStockCode);
             }
         });
+    });
+
+    chartPeriodApplyButton?.addEventListener('click', () => {
+        if (!validateChartPeriod()) return;
+        if (!currentStockCode) {
+            setChartPeriodMessage('종목을 먼저 검색하세요.', 'error');
+            return;
+        }
+        fetchChart(currentStockCode, currentChartInterval);
+    });
+
+    chartPeriodResetButton?.addEventListener('click', () => {
+        if (chartPeriodStartInput) chartPeriodStartInput.value = '';
+        if (chartPeriodEndInput) chartPeriodEndInput.value = '';
+        setChartPeriodMessage('');
+        if (currentStockCode) {
+            fetchChart(currentStockCode, currentChartInterval);
+        }
     });
 
     if (chartCanvas) {

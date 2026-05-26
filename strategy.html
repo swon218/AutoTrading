@@ -11,7 +11,7 @@
 
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="h-screen flex flex-col overflow-hidden" data-default-panel="indicator" data-chart-mode="strategy" data-default-chart-interval="day" data-chart-years="3">
+<body class="h-screen flex flex-col overflow-hidden" data-default-panel="period" data-chart-mode="strategy" data-default-chart-interval="day" data-chart-years="3" data-chart-limit="500">
 
     <header class="h-14 bg-slate-800 border-b border-slate-700 flex items-center px-6 shrink-0">
         <button id="sidebarToggle" type="button" class="sidebar-toggle-button" aria-label="좌측 메뉴 접기" aria-expanded="true">
@@ -178,11 +178,38 @@
         <aside class="indicator-sidebar flex flex-col p-4 pl-0 space-y-4 shrink-0 overflow-y-auto">
             <div class="panel flex flex-col flex-1 min-h-0">
                 <div class="right-panel-tabs" role="tablist" aria-label="우측 패널 선택">
-                    <button id="indicatorPanelTab" type="button" class="right-panel-tab is-active" data-panel-tab="indicator"
-                        role="tab" aria-selected="true" aria-controls="indicatorPanel">지표 설정</button>
+                    <button id="periodPanelTab" type="button" class="right-panel-tab is-active" data-panel-tab="period"
+                        role="tab" aria-selected="true" aria-controls="periodPanel">기간 설정</button>
+                    <button id="indicatorPanelTab" type="button" class="right-panel-tab" data-panel-tab="indicator"
+                        role="tab" aria-selected="false" aria-controls="indicatorPanel">보조지표 설정</button>
                 </div>
 
-                <div id="indicatorPanel" class="indicator-strategy-body" role="tabpanel" aria-labelledby="indicatorPanelTab">
+                <div id="periodPanel" class="chart-period-body" role="tabpanel" aria-labelledby="periodPanelTab">
+                    <div class="indicator-strategy-toolbar">
+                        <span class="indicator-section-title">기간 설정</span>
+                    </div>
+
+                    <div class="indicator-strategy-divider"></div>
+
+                    <div class="chart-period-fields">
+                        <label class="chart-period-field" for="chartPeriodStartInput">
+                            <span>시작일</span>
+                            <input id="chartPeriodStartInput" type="date">
+                        </label>
+                        <label class="chart-period-field" for="chartPeriodEndInput">
+                            <span>종료일</span>
+                            <input id="chartPeriodEndInput" type="date">
+                        </label>
+                    </div>
+
+                    <div class="chart-period-actions">
+                        <button id="chartPeriodResetButton" type="button" class="indicator-reset-button">초기화</button>
+                        <button id="chartPeriodApplyButton" type="button" class="indicator-save-button">조회</button>
+                    </div>
+                    <p id="chartPeriodMessage" class="indicator-message chart-period-message" aria-live="polite"></p>
+                </div>
+
+                <div id="indicatorPanel" class="indicator-strategy-body hidden" role="tabpanel" aria-labelledby="indicatorPanelTab">
                     <div class="indicator-strategy-toolbar">
                         <span class="indicator-section-title">지표 설정</span>
                         <select id="savedStrategySelect" class="indicator-preset-select" aria-label="저장한 지표 설정 불러오기">
