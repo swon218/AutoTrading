@@ -2252,7 +2252,7 @@ document.addEventListener('DOMContentLoaded', () => {
     startMarketSessionStatusTimer();
     startApiHealthTimer();
     setActiveIntervalButton();
-    setRightPanel('order');
+    setRightPanel(document.body.dataset.defaultPanel || 'order');
     setOrderAction('buy');
     setOrderPriceMode('limit');
     initIndicatorStrategyPanel();
