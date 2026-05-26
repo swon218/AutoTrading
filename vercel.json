@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://afterwards-suggestion-womens-therapeutic.trycloudflare.com"
+      "destination": "https://controls-newfoundland-seed-needs.trycloudflare.com/api/:path*"
     }
   ]
 }
