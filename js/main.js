@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chartCanvas = document.getElementById('stockChart');
     const chartStatus = document.getElementById('chartStatus');
     const chartIntervalButtons = Array.from(document.querySelectorAll('.chart-interval-btn'));
+    const availableChartIntervals = chartIntervalButtons.map((button) => button.dataset.interval).filter(Boolean);
     const chartZoomIn = document.getElementById('chartZoomIn');
     const chartZoomOut = document.getElementById('chartZoomOut');
 
@@ -128,7 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let latestResults = [];
     let activeSearchIndex = -1;
     const SEARCH_DRAFT_STORAGE_KEY = 'autotrading.stockSearchDraft';
-    const DEFAULT_CHART_INTERVAL = '15';
+    const isStaticStrategyChart = document.body.dataset.chartMode === 'strategy';
+    const DEFAULT_CHART_INTERVAL = document.body.dataset.defaultChartInterval || '15';
+    const chartHistoryYears = Number(document.body.dataset.chartYears) || 0;
     let currentChartInterval = DEFAULT_CHART_INTERVAL;
     let latestCandles = [];
     let latestCandlesInterval = null;
@@ -1701,7 +1704,15 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 setChartStatus('');
             }
-            const response = await authFetch(`/api/chart/${encodeURIComponent(code)}?interval=${encodeURIComponent(requestInterval)}`, {
+            const params = new URLSearchParams({ interval: requestInterval });
+            if (chartHistoryYears > 0) {
+                params.set('years', String(chartHistoryYears));
+            }
+            if (isStaticStrategyChart) {
+                params.set('settled', '1');
+            }
+
+            const response = await authFetch(`/api/chart/${encodeURIComponent(code)}?${params.toString()}`, {
                 cache: 'no-store',
             });
 
@@ -1954,14 +1965,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateChartUrl(stock.code);
         await fetchChart(stock.code);
-        startRealtime(stock.code);
+        if (!isStaticStrategyChart) {
+            startRealtime(stock.code);
+        }
         if (searchBar) {
             searchBar.value = '';
         }
         clearSearchDraft();
         updateSearchClearButton();
         renderSearchMessage('종목명 또는 종목코드를 입력하세요.');
-        startAutoRefresh();
+        if (!isStaticStrategyChart) {
+            startAutoRefresh();
+        }
     };
 
     const searchStocks = async (query) => {
@@ -2106,7 +2121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             setActiveIntervalButton();
             updateChartUrl(currentStockCode);
             fetchChart(currentStockCode, currentChartInterval);
-            if (currentStockCode) {
+            if (currentStockCode && !isStaticStrategyChart) {
                 startRealtime(currentStockCode);
             }
         });
@@ -2262,7 +2277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialCode = urlParams.get('code');
     const initialInterval = urlParams.get('interval');
 
-    if (['1', '5', '15', '30', '60', '120', 'day', 'week', 'month'].includes(initialInterval)) {
+    if (availableChartIntervals.includes(initialInterval)) {
         currentChartInterval = initialInterval;
         setActiveIntervalButton();
     }
@@ -2275,8 +2290,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!stock) return;
             updateChartUrl(stock.code);
             fetchChart(stock.code);
-            startRealtime(stock.code);
-            startAutoRefresh();
+            if (!isStaticStrategyChart) {
+                startRealtime(stock.code);
+                startAutoRefresh();
+            }
         });
     }
 });
