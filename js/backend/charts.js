@@ -64,6 +64,11 @@ function normalizeDate(value) {
     return '';
 }
 
+function dateToYmd(value) {
+    const date = normalizeDate(value);
+    return date ? date.replace(/-/g, '') : '';
+}
+
 function filterCandlesByDateRange(candles, startDate, endDate) {
     const start = normalizeDate(startDate);
     const end = normalizeDate(endDate);
@@ -161,7 +166,10 @@ async function getChartData(query, interval = '1', credentials = null, options =
     const startDate = normalizeDate(options.startDate);
     const endDate = normalizeDate(options.endDate);
     const settled = Boolean(options.settled);
-    const baseDate = settled && DAILY_CHART_INTERVALS.has(requestInterval) ? getSettledBaseDate() : todayYmd();
+    const requestedBaseDate = dateToYmd(endDate);
+    const baseDate = DAILY_CHART_INTERVALS.has(requestInterval)
+        ? requestedBaseDate || (settled ? getSettledBaseDate() : todayYmd())
+        : todayYmd();
     const cacheKey = `${code}:${normalizedInterval}:years=${years}:limit=${limit}:start=${startDate}:end=${endDate}:settled=${settled ? '1' : '0'}:base=${baseDate}`;
     const cached = chartCache.get(cacheKey);
     const now = Date.now();

@@ -1832,13 +1832,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 setChartStatus('');
             }
             const params = new URLSearchParams({ interval: requestInterval });
-            if (chartHistoryYears > 0) {
-                params.set('years', String(chartHistoryYears));
-            }
             if (isStaticStrategyChart) {
                 params.set('settled', '1');
                 const startDate = getChartPeriodValue('start');
                 const endDate = getChartPeriodValue('end');
+                const hasPeriod = Boolean(startDate || endDate);
+                if (!hasPeriod && chartHistoryYears > 0) {
+                    params.set('years', String(chartHistoryYears));
+                }
                 if (startDate) {
                     params.set('startDate', startDate);
                 }
@@ -1846,6 +1847,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     params.set('endDate', endDate);
                 }
                 params.set('limit', hasCustomChartPeriod() ? '0' : String(chartCandleLimit || 500));
+            } else if (chartHistoryYears > 0) {
+                params.set('years', String(chartHistoryYears));
             }
 
             const response = await authFetch(`/api/chart/${encodeURIComponent(code)}?${params.toString()}`, {
