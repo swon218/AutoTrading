@@ -192,14 +192,44 @@
                     <div class="indicator-strategy-divider"></div>
 
                     <div class="chart-period-fields">
-                        <label class="chart-period-field" for="chartPeriodStartInput">
+                        <div class="chart-period-field" data-chart-period-field="start">
                             <span>시작일</span>
-                            <input id="chartPeriodStartInput" type="date">
-                        </label>
-                        <label class="chart-period-field" for="chartPeriodEndInput">
+                            <div class="chart-period-date-row">
+                                <input id="chartPeriodStartYearInput" type="text" inputmode="numeric" maxlength="4"
+                                    autocomplete="off" data-chart-period-part="year" aria-label="시작일 연도">
+                                <span>년</span>
+                                <input id="chartPeriodStartMonthInput" type="text" inputmode="numeric" maxlength="2"
+                                    autocomplete="off" data-chart-period-part="month" aria-label="시작일 월">
+                                <span>월</span>
+                                <input id="chartPeriodStartDayInput" type="text" inputmode="numeric" maxlength="2"
+                                    autocomplete="off" data-chart-period-part="day" aria-label="시작일 일">
+                                <span>일</span>
+                                <button type="button" class="chart-period-calendar-button" data-chart-period-calendar="start"
+                                    aria-label="시작일 달력 열기" title="시작일 달력 열기">
+                                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                                </button>
+                                <input id="chartPeriodStartInput" type="date" class="chart-period-native-date" data-chart-period-native="start" tabindex="-1">
+                            </div>
+                        </div>
+                        <div class="chart-period-field" data-chart-period-field="end">
                             <span>종료일</span>
-                            <input id="chartPeriodEndInput" type="date">
-                        </label>
+                            <div class="chart-period-date-row">
+                                <input id="chartPeriodEndYearInput" type="text" inputmode="numeric" maxlength="4"
+                                    autocomplete="off" data-chart-period-part="year" aria-label="종료일 연도">
+                                <span>년</span>
+                                <input id="chartPeriodEndMonthInput" type="text" inputmode="numeric" maxlength="2"
+                                    autocomplete="off" data-chart-period-part="month" aria-label="종료일 월">
+                                <span>월</span>
+                                <input id="chartPeriodEndDayInput" type="text" inputmode="numeric" maxlength="2"
+                                    autocomplete="off" data-chart-period-part="day" aria-label="종료일 일">
+                                <span>일</span>
+                                <button type="button" class="chart-period-calendar-button" data-chart-period-calendar="end"
+                                    aria-label="종료일 달력 열기" title="종료일 달력 열기">
+                                    <i class="fa-solid fa-calendar-days" aria-hidden="true"></i>
+                                </button>
+                                <input id="chartPeriodEndInput" type="date" class="chart-period-native-date" data-chart-period-native="end" tabindex="-1">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="chart-period-actions">

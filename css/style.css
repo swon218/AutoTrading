@@ -1728,6 +1728,56 @@ body.overflow-hidden {
     border-color: #10b981;
 }
 
+.chart-period-date-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1.5fr) auto minmax(0, 0.85fr) auto minmax(0, 0.85fr) auto 2.4rem;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.chart-period-date-row > span {
+    color: #cbd5e1;
+    font-size: 0.78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.chart-period-date-row input[data-chart-period-part] {
+    height: 2.4rem;
+    padding: 0 0.5rem;
+    text-align: center;
+}
+
+.chart-period-calendar-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    border: 1px solid #34d399;
+    border-radius: 0.45rem;
+    background-color: #064e3b;
+    color: #d1fae5;
+    cursor: pointer;
+}
+
+.chart-period-calendar-button:hover {
+    background-color: #047857;
+    color: #ffffff;
+}
+
+.chart-period-native-date {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 2.4rem !important;
+    height: 2.4rem !important;
+    opacity: 0;
+    pointer-events: none;
+    color-scheme: light;
+}
+
 .chart-period-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;

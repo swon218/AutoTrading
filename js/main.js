@@ -102,6 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const chartPeriodApplyButton = document.getElementById('chartPeriodApplyButton');
     const chartPeriodResetButton = document.getElementById('chartPeriodResetButton');
     const chartPeriodMessage = document.getElementById('chartPeriodMessage');
+    const chartPeriodFields = Array.from(document.querySelectorAll('[data-chart-period-field]'));
+    const chartPeriodCalendarButtons = Array.from(document.querySelectorAll('[data-chart-period-calendar]'));
     const indicatorSearchInput = document.getElementById('indicatorSearchInput');
     const indicatorSearchDropdown = document.getElementById('indicatorSearchDropdown');
     const indicatorAddButton = document.getElementById('indicatorAddButton');
@@ -238,13 +240,103 @@ document.addEventListener('DOMContentLoaded', () => {
         chartPeriodMessage.classList.toggle('is-error', type === 'error');
     };
 
+    const getChartPeriodField = (type) => {
+        return chartPeriodFields.find((field) => field.dataset.chartPeriodField === type) || null;
+    };
+
+    const getChartPeriodPartInput = (type, part) => {
+        return getChartPeriodField(type)?.querySelector(`[data-chart-period-part="${part}"]`) || null;
+    };
+
+    const getChartPeriodNativeInput = (type) => {
+        return document.querySelector(`[data-chart-period-native="${type}"]`);
+    };
+
+    const sanitizeChartPeriodPart = (input) => {
+        if (!input) return;
+        const maxLength = input.dataset.chartPeriodPart === 'year' ? 4 : 2;
+        input.value = input.value.replace(/\D/g, '').slice(0, maxLength);
+    };
+
+    const normalizeChartPeriodPart = (input) => {
+        sanitizeChartPeriodPart(input);
+        const part = input?.dataset.chartPeriodPart;
+        if ((part === 'month' || part === 'day') && input.value.length === 1) {
+            input.value = input.value.padStart(2, '0');
+        }
+    };
+
+    const getChartPeriodParts = (type) => {
+        return {
+            year: getChartPeriodPartInput(type, 'year')?.value || '',
+            month: getChartPeriodPartInput(type, 'month')?.value || '',
+            day: getChartPeriodPartInput(type, 'day')?.value || '',
+        };
+    };
+
+    const hasAnyChartPeriodPart = (type) => {
+        const parts = getChartPeriodParts(type);
+        return Boolean(parts.year || parts.month || parts.day);
+    };
+
+    const getChartPeriodValue = (type) => {
+        const parts = getChartPeriodParts(type);
+        if (!parts.year && !parts.month && !parts.day) return '';
+        if (parts.year.length !== 4 || parts.month.length !== 2 || parts.day.length !== 2) return '';
+        return `${parts.year}-${parts.month}-${parts.day}`;
+    };
+
+    const isValidChartPeriodValue = (value) => {
+        if (!value) return true;
+        const [year, month, day] = value.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+    };
+
+    const setChartPeriodParts = (type, value) => {
+        const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) return;
+        const [, year, month, day] = match;
+        const yearInput = getChartPeriodPartInput(type, 'year');
+        const monthInput = getChartPeriodPartInput(type, 'month');
+        const dayInput = getChartPeriodPartInput(type, 'day');
+        if (yearInput) yearInput.value = year;
+        if (monthInput) monthInput.value = month;
+        if (dayInput) dayInput.value = day;
+    };
+
+    const normalizeAllChartPeriodParts = () => {
+        chartPeriodFields.forEach((field) => {
+            field.querySelectorAll('[data-chart-period-part]').forEach((input) => {
+                normalizeChartPeriodPart(input);
+            });
+            syncChartPeriodNativeInput(field.dataset.chartPeriodField);
+        });
+    };
+
+    const syncChartPeriodNativeInput = (type) => {
+        const nativeInput = getChartPeriodNativeInput(type);
+        if (!nativeInput) return;
+        const value = getChartPeriodValue(type);
+        nativeInput.value = isValidChartPeriodValue(value) ? value : '';
+    };
+
     const hasCustomChartPeriod = () => {
-        return Boolean(chartPeriodStartInput?.value || chartPeriodEndInput?.value);
+        return hasAnyChartPeriodPart('start') || hasAnyChartPeriodPart('end');
     };
 
     const validateChartPeriod = () => {
-        const startDate = chartPeriodStartInput?.value || '';
-        const endDate = chartPeriodEndInput?.value || '';
+        normalizeAllChartPeriodParts();
+        const startDate = getChartPeriodValue('start');
+        const endDate = getChartPeriodValue('end');
+        if ((hasAnyChartPeriodPart('start') && !startDate) || (hasAnyChartPeriodPart('end') && !endDate)) {
+            setChartPeriodMessage('날짜는 연도 4자리, 월/일 2자리로 입력하세요.', 'error');
+            return false;
+        }
+        if (!isValidChartPeriodValue(startDate) || !isValidChartPeriodValue(endDate)) {
+            setChartPeriodMessage('존재하는 날짜를 입력하세요.', 'error');
+            return false;
+        }
         if (startDate && endDate && startDate > endDate) {
             setChartPeriodMessage('시작일은 종료일보다 늦을 수 없습니다.', 'error');
             return false;
@@ -1745,11 +1837,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (isStaticStrategyChart) {
                 params.set('settled', '1');
-                if (chartPeriodStartInput?.value) {
-                    params.set('startDate', chartPeriodStartInput.value);
+                const startDate = getChartPeriodValue('start');
+                const endDate = getChartPeriodValue('end');
+                if (startDate) {
+                    params.set('startDate', startDate);
                 }
-                if (chartPeriodEndInput?.value) {
-                    params.set('endDate', chartPeriodEndInput.value);
+                if (endDate) {
+                    params.set('endDate', endDate);
                 }
                 params.set('limit', hasCustomChartPeriod() ? '0' : String(chartCandleLimit || 500));
             }
@@ -2170,6 +2264,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    chartPeriodFields.forEach((field) => {
+        const type = field.dataset.chartPeriodField;
+        field.querySelectorAll('[data-chart-period-part]').forEach((input) => {
+            input.addEventListener('input', () => {
+                sanitizeChartPeriodPart(input);
+                syncChartPeriodNativeInput(type);
+                setChartPeriodMessage('');
+            });
+            input.addEventListener('blur', () => {
+                normalizeChartPeriodPart(input);
+                syncChartPeriodNativeInput(type);
+            });
+        });
+    });
+
+    chartPeriodCalendarButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const type = button.dataset.chartPeriodCalendar;
+            const nativeInput = getChartPeriodNativeInput(type);
+            if (!nativeInput) return;
+            syncChartPeriodNativeInput(type);
+            try {
+                if (typeof nativeInput.showPicker === 'function') {
+                    nativeInput.showPicker();
+                } else {
+                    nativeInput.click();
+                }
+            } catch {
+                nativeInput.focus();
+                nativeInput.click();
+            }
+        });
+    });
+
+    [chartPeriodStartInput, chartPeriodEndInput].forEach((input) => {
+        input?.addEventListener('change', () => {
+            setChartPeriodParts(input.dataset.chartPeriodNative, input.value);
+            setChartPeriodMessage('');
+        });
+    });
+
     chartPeriodApplyButton?.addEventListener('click', () => {
         if (!validateChartPeriod()) return;
         if (!currentStockCode) {
@@ -2180,6 +2315,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     chartPeriodResetButton?.addEventListener('click', () => {
+        chartPeriodFields.forEach((field) => {
+            field.querySelectorAll('[data-chart-period-part]').forEach((input) => {
+                input.value = '';
+            });
+        });
         if (chartPeriodStartInput) chartPeriodStartInput.value = '';
         if (chartPeriodEndInput) chartPeriodEndInput.value = '';
         setChartPeriodMessage('');
