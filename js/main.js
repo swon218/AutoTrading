@@ -2262,7 +2262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialCode = urlParams.get('code');
     const initialInterval = urlParams.get('interval');
 
-    if (['1', '5', '15', '60', '120', 'day', 'week', 'month'].includes(initialInterval)) {
+    if (['1', '5', '15', '30', '60', '120', 'day', 'week', 'month'].includes(initialInterval)) {
         currentChartInterval = initialInterval;
         setActiveIntervalButton();
     }

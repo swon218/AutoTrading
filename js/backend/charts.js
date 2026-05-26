@@ -86,9 +86,9 @@ function aggregateIntradayCandles(candles, intervalMinutes) {
 
 async function getChartData(query, interval = '1', credentials = null) {
     const code = await resolveStockCode(query, credentials);
-    const normalizedInterval = ['1', '5', '15', '60', '120', 'day', 'week', 'month'].includes(interval) ? interval : '1';
-    const requestInterval = ['60', '120'].includes(normalizedInterval) ? '15' : normalizedInterval;
-    const aggregateMinutes = ['60', '120'].includes(normalizedInterval) ? Number(normalizedInterval) : null;
+    const normalizedInterval = ['1', '5', '15', '30', '60', '120', 'day', 'week', 'month'].includes(interval) ? interval : '1';
+    const requestInterval = normalizedInterval === '120' ? '60' : normalizedInterval;
+    const aggregateMinutes = normalizedInterval === '120' ? Number(normalizedInterval) : null;
     const cacheKey = `${code}:${normalizedInterval}`;
     const cached = chartCache.get(cacheKey);
     const now = Date.now();
@@ -119,12 +119,6 @@ async function getChartData(query, interval = '1', credentials = null) {
 
     const aggregatedCandles = aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles;
     const candles = aggregatedCandles.slice(-CHART_CANDLE_LIMIT);
-
-    console.info(
-        `[chart] ${code} interval=${normalizedInterval} requestInterval=${requestInterval}`
-        + ` raw=${chartItems.length} valid=${rawCandles.length} aggregated=${aggregatedCandles.length}`
-        + ` returned=${candles.length} limit=${CHART_CANDLE_LIMIT}`,
-    );
 
     const data = {
         code,
