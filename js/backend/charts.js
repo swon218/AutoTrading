@@ -9,7 +9,7 @@ const {
 } = require('./kiwoomUtils');
 
 const chartCache = new Map();
-const CHART_CANDLE_LIMIT = 500;
+const CHART_CANDLE_LIMIT = 1000;
 const DAILY_CHART_INTERVALS = new Set(['day', 'week', 'month']);
 const CHART_API_BY_INTERVAL = {
     day: 'ka10081',
