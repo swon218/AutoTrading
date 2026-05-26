@@ -293,6 +293,15 @@ document.addEventListener('DOMContentLoaded', () => {
         return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
     };
 
+    const isChartPeriodWithinYears = (startDate, endDate, years) => {
+        if (!startDate || !endDate || !years) return true;
+        const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+        const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+        const maxEndDate = new Date(startYear + years, startMonth - 1, startDay);
+        const end = new Date(endYear, endMonth - 1, endDay);
+        return end <= maxEndDate;
+    };
+
     const setChartPeriodParts = (type, value) => {
         const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (!match) return;
@@ -339,6 +348,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (startDate && endDate && startDate > endDate) {
             setChartPeriodMessage('시작일은 종료일보다 늦을 수 없습니다.', 'error');
+            return false;
+        }
+        if (!isChartPeriodWithinYears(startDate, endDate, chartHistoryYears)) {
+            setChartPeriodMessage(`${chartHistoryYears}년치 차트 데이터만 제공됩니다. ${chartHistoryYears}년 이내 기간을 선택하세요.`, 'error');
             return false;
         }
         setChartPeriodMessage('');

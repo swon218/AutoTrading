@@ -82,6 +82,17 @@ function filterCandlesByDateRange(candles, startDate, endDate) {
     });
 }
 
+function isDateRangeWithinYears(startDate, endDate, years) {
+    const yearsNumber = Number(years);
+    if (!startDate || !endDate || !Number.isFinite(yearsNumber) || yearsNumber <= 0) return true;
+
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const maxEndDate = new Date(startYear + yearsNumber, startMonth - 1, startDay);
+    const end = new Date(endYear, endMonth - 1, endDay);
+    return end <= maxEndDate;
+}
+
 function limitCandles(candles, limit) {
     const count = Number(limit);
     if (!Number.isFinite(count) || count <= 0) return candles;
@@ -170,6 +181,13 @@ async function getChartData(query, interval = '1', credentials = null, options =
     const baseDate = DAILY_CHART_INTERVALS.has(requestInterval)
         ? requestedBaseDate || (settled ? getSettledBaseDate() : todayYmd())
         : todayYmd();
+
+    if (!isDateRangeWithinYears(startDate, endDate, years)) {
+        const error = new Error(`${years} years of chart data are available at most.`);
+        error.statusCode = 400;
+        throw error;
+    }
+
     const cacheKey = `${code}:${normalizedInterval}:years=${years}:limit=${limit}:start=${startDate}:end=${endDate}:settled=${settled ? '1' : '0'}:base=${baseDate}`;
     const cached = chartCache.get(cacheKey);
     const now = Date.now();
