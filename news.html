@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoTrading - 뉴스</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+    <header class="h-14 bg-slate-800 border-b border-slate-700 flex items-center px-6 shrink-0">
+        <button id="sidebarToggle" type="button" class="sidebar-toggle-button" aria-label="좌측 메뉴 접기" aria-expanded="true">
+            <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <a href="index.html" class="w-64 flex items-center space-x-2 shrink-0 hover:opacity-90 transition-opacity" aria-label="AutoTrading 홈으로 이동">
+            <div class="w-9 h-8 bg-emerald-500 rounded flex items-center justify-center text-slate-900 font-bold text-sm tracking-tight">AT</div>
+            <span class="font-bold text-xl tracking-tight text-white">AutoTrading <span class="text-xs text-emerald-400 ml-1 border border-emerald-400 px-1 py-0.5 rounded">BETA</span></span>
+        </a>
+
+        <div class="relative flex-1 max-w-sm mx-4">
+            <input id="searchBar" type="text" placeholder="종목명 또는 종목코드를 입력하세요"
+                class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 pr-10 text-sm text-white focus:outline-none focus:border-emerald-500">
+            <button id="searchClearButton" type="button" class="search-clear-button" aria-label="검색어 지우기" title="검색어 지우기">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+
+            <div id="searchModal" class="search-modal">
+                <p class="text-xs text-slate-400 mb-2 font-bold">검색 결과</p>
+                <div id="searchResults" class="search-results">
+                    <div class="search-empty">종목명 또는 종목코드를 입력하세요.</div>
+                </div>
+                <div class="mb-4">
+                    <p class="text-xs text-slate-400 mb-2 font-bold">최근 검색</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="px-3 py-1 bg-slate-700 rounded-full text-xs text-slate-300">KODEX 미국S&P500</span>
+                        <span class="px-3 py-1 bg-slate-700 rounded-full text-xs text-slate-300">QQQ</span>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <p class="text-xs text-slate-400 mb-2 font-bold">인기 검색</p>
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-sm text-slate-300"><span>1 삼성전자</span><span class="text-blue-500">-0.92%</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-6 ml-auto">
+            <button id="profileBtn" type="button" class="login-trigger" aria-haspopup="dialog" aria-controls="authModal">
+                <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+                <span>로그인</span>
+            </button>
+        </div>
+    </header>
+
+    <div id="authModal" class="auth-modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <div class="auth-modal-card">
+            <button id="authModalClose" type="button" class="auth-modal-close" aria-label="로그인 창 닫기">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            <div class="auth-modal-icon">
+                <i class="fa-solid fa-user-lock" aria-hidden="true"></i>
+            </div>
+            <h2 id="authModalTitle">로그인</h2>
+            <form class="auth-login-form" data-auth-panel="login">
+                <label class="auth-field">
+                    <span>아이디</span>
+                    <input type="text" name="loginId" autocomplete="username" placeholder="아이디를 입력하세요">
+                </label>
+                <label class="auth-field">
+                    <span>패스워드</span>
+                    <input type="password" name="password" autocomplete="current-password" placeholder="패스워드를 입력하세요">
+                </label>
+                <button type="submit" class="auth-submit-button">로그인</button>
+                <p class="auth-switch-text">
+                    <button id="authSignupLink" type="button">회원가입</button>
+                </p>
+            </form>
+            <form class="auth-login-form hidden" data-auth-panel="signup">
+                <label class="auth-field">
+                    <span>아이디</span>
+                    <input type="text" name="signupId" autocomplete="username" placeholder="아이디를 입력하세요">
+                </label>
+                <label class="auth-field">
+                    <span>패스워드</span>
+                    <input type="password" name="signupPassword" autocomplete="new-password" placeholder="패스워드를 입력하세요">
+                </label>
+                <label class="auth-field">
+                    <span>닉네임</span>
+                    <input type="text" name="nickname" autocomplete="nickname" placeholder="닉네임을 입력하세요">
+                </label>
+                <button type="submit" class="auth-submit-button">회원가입</button>
+                <p class="auth-switch-text">
+                    <span>이미 계정이 있나요?</span>
+                    <button id="authLoginLink" type="button">로그인</button>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div class="app-content flex flex-1 overflow-hidden">
+        <aside id="appSidebar" class="app-sidebar w-16 md:w-64 bg-slate-800 border-r border-slate-700 flex flex-col justify-between shrink-0 transition-all duration-300">
+            <nav class="p-4 space-y-2">
+                <a href="trading.html" class="flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
+                    <i class="fa-solid fa-chart-line text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">트레이딩 대시보드</span>
+                </a>
+                <a href="strategy.html" class="flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
+                    <i class="fa-solid fa-diagram-project text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">전략 설정</span>
+                </a>
+                <a href="news.html" class="flex items-center space-x-3 text-emerald-400 bg-slate-700/50 p-3 rounded-lg transition-colors" aria-current="page">
+                    <i class="fa-solid fa-newspaper text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">뉴스</span>
+                </a>
+                <a href="asset.html" class="sidebar-nav-link flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
+                    <i class="fa-solid fa-wallet text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">자산 현황</span>
+                </a>
+                <a href="#" class="flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
+                    <i class="fa-solid fa-clock-rotate-left text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">매매 이력</span>
+                </a>
+            </nav>
+            <div class="p-4">
+                <a href="#" class="flex items-center space-x-3 text-slate-400 hover:text-white p-3 transition-colors">
+                    <i class="fa-solid fa-gear text-lg w-6 text-center"></i>
+                    <span class="font-medium hidden md:block">시스템 설정</span>
+                </a>
+            </div>
+        </aside>
+
+        <main class="app-main news-main flex-1 overflow-hidden">
+            <section class="news-shell" aria-label="뉴스">
+                <div class="news-toolbar">
+                    <div>
+                        <h1>뉴스</h1>
+                        <p>시장 이슈와 종목 뉴스를 한 화면에서 확인합니다.</p>
+                    </div>
+                    <button id="newsRefreshButton" class="asset-refresh-button" type="button" title="새로고침" aria-label="뉴스 새로고침">
+                        <i class="fa-solid fa-rotate-right" aria-hidden="true"></i>
+                    </button>
+                </div>
+
+                <div class="news-filter-tabs" role="tablist" aria-label="뉴스 종류">
+                    <button class="news-filter-tab is-active" type="button">전체</button>
+                    <button class="news-filter-tab" type="button">시장</button>
+                    <button class="news-filter-tab" type="button">종목</button>
+                    <button class="news-filter-tab" type="button">공시</button>
+                </div>
+
+                <div class="news-content-grid">
+                    <section class="news-panel" aria-label="주요 뉴스">
+                        <div class="news-panel-head">
+                            <h2>주요 뉴스</h2>
+                            <span>연결 대기</span>
+                        </div>
+                        <div class="news-list">
+                            <article class="news-item">
+                                <div class="news-item-meta">
+                                    <span>시장</span>
+                                    <time>준비 중</time>
+                                </div>
+                                <h3>뉴스 API 연동 후 주요 기사 목록이 표시됩니다.</h3>
+                                <p>키움 또는 외부 뉴스 소스를 연결하면 종목 검색, 전략 감시와 함께 활용할 수 있습니다.</p>
+                            </article>
+                            <article class="news-item">
+                                <div class="news-item-meta">
+                                    <span>종목</span>
+                                    <time>준비 중</time>
+                                </div>
+                                <h3>종목별 뉴스 필터 영역</h3>
+                                <p>상단 검색창에서 종목을 선택하면 해당 종목의 뉴스 화면으로 확장할 수 있습니다.</p>
+                            </article>
+                        </div>
+                    </section>
+
+                    <aside class="news-watch-panel" aria-label="뉴스 요약">
+                        <div class="news-panel-head">
+                            <h2>요약</h2>
+                            <span>오늘</span>
+                        </div>
+                        <div class="news-summary-list">
+                            <div>
+                                <span>시장 뉴스</span>
+                                <strong>-</strong>
+                            </div>
+                            <div>
+                                <span>종목 뉴스</span>
+                                <strong>-</strong>
+                            </div>
+                            <div>
+                                <span>공시</span>
+                                <strong>-</strong>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module" src="js/authModal.js"></script>
+    <script type="module" src="js/news.js"></script>
+</body>
+</html>
