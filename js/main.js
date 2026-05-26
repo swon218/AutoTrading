@@ -2108,6 +2108,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 60000);
     };
 
+    const getDefaultRankingStock = async () => {
+        try {
+            const response = await authFetch('/api/home-rankings?type=realtime&limit=1', {
+                cache: 'no-store',
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            return payload.items?.[0]?.code || payload.items?.[0]?.name || '';
+        } catch (error) {
+            console.error('Default realtime ranking request failed.', error);
+            return '';
+        }
+    };
+
+    const loadDefaultRankingStock = async () => {
+        const target = await getDefaultRankingStock();
+        if (!target || currentStockCode) return;
+        await selectStock(target);
+    };
+
     const selectStock = async (query) => {
         const stock = await fetchStock(query, {
             closeSearch: true,
@@ -2512,5 +2532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 startAutoRefresh();
             }
         });
+    } else {
+        loadDefaultRankingStock();
     }
 });
