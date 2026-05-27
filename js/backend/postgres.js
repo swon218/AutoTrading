@@ -80,27 +80,57 @@ async function upsertCandles15m(stockCode, candles = []) {
     );
 }
 
-async function getCandles15m(stockCode, startDate, endDate) {
+async function getCandles15m(stockCode, startDate = null, endDate = null, limit = 0) {
+    const params = [stockCode];
+    const conditions = ['stock_code = $1'];
+
+    if (startDate) {
+        params.push(startDate);
+        conditions.push(`candle_time >= $${params.length}::timestamptz`);
+    }
+    if (endDate) {
+        params.push(endDate);
+        conditions.push(`candle_time <= $${params.length}::timestamptz`);
+    }
+    if (Number(limit) > 0) {
+        params.push(Math.floor(Number(limit)));
+    }
+
+    const limitClause = Number(limit) > 0 ? `LIMIT $${params.length}` : '';
     const result = await query(
         `
-        SELECT
-            stock_code,
-            candle_time,
-            open_price,
-            high_price,
-            low_price,
-            close_price,
-            volume
-        FROM market_data.stock_candles_15m
-        WHERE stock_code = $1
-          AND candle_time >= $2::timestamptz
-          AND candle_time <= $3::timestamptz
+        SELECT *
+        FROM (
+            SELECT
+                stock_code,
+                candle_time,
+                open_price,
+                high_price,
+                low_price,
+                close_price,
+                volume
+            FROM market_data.stock_candles_15m
+            WHERE ${conditions.join(' AND ')}
+            ORDER BY candle_time DESC
+            ${limitClause}
+        ) candles
         ORDER BY candle_time ASC
         `,
-        [stockCode, startDate, endDate],
+        params,
     );
 
     return result.rows;
+}
+
+function rowToCandle(row) {
+    return {
+        time: new Date(row.candle_time).toISOString(),
+        open: Number(row.open_price),
+        high: Number(row.high_price),
+        low: Number(row.low_price),
+        close: Number(row.close_price),
+        volume: Number(row.volume || 0),
+    };
 }
 
 async function closePgPool() {
@@ -114,5 +144,6 @@ module.exports = {
     getCandles15m,
     getPgPool,
     query,
+    rowToCandle,
     upsertCandles15m,
 };

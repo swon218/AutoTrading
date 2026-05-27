@@ -11,7 +11,7 @@
 
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="h-screen flex flex-col overflow-hidden" data-default-panel="period" data-chart-mode="strategy" data-default-chart-interval="day" data-chart-years="3" data-chart-limit="500">
+<body class="h-screen flex flex-col overflow-hidden" data-default-panel="period" data-chart-mode="strategy" data-chart-source="postgres" data-default-chart-interval="15" data-chart-years="5" data-chart-limit="500">
 
     <header class="h-14 bg-slate-800 border-b border-slate-700 flex items-center px-6 shrink-0">
         <button id="sidebarToggle" type="button" class="sidebar-toggle-button" aria-label="좌측 메뉴 접기" aria-expanded="true">
@@ -161,9 +161,10 @@
 
                 <section class="main_b panel">
                     <div class="h-10 border-b border-slate-700 flex items-center px-4 space-x-4 text-sm shrink-0">
-                        <button class="chart-interval-btn text-emerald-400 font-medium border-b-2 border-emerald-400 py-2" data-interval="day">일봉</button>
-                        <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="week">주봉</button>
-                        <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="month">월봉</button>
+                        <button class="chart-interval-btn text-emerald-400 font-medium border-b-2 border-emerald-400 py-2" data-interval="15">15분</button>
+                        <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="30">30분</button>
+                        <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="60">1시간</button>
+                        <button class="chart-interval-btn text-slate-400 hover:text-white py-2" data-interval="120">2시간</button>
                         <div class="flex-1"></div>
                         <button class="text-slate-400 hover:text-white"><i class="fa-solid fa-expand"></i></button>
                     </div>

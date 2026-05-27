@@ -138,6 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeSearchIndex = -1;
     const SEARCH_DRAFT_STORAGE_KEY = 'autotrading.stockSearchDraft';
     const isStaticStrategyChart = document.body.dataset.chartMode === 'strategy';
+    const chartDataSource = document.body.dataset.chartSource || 'kiwoom';
     const DEFAULT_CHART_INTERVAL = document.body.dataset.defaultChartInterval || '15';
     const chartHistoryYears = Number(document.body.dataset.chartYears) || 0;
     const chartCandleLimit = Number(document.body.dataset.chartLimit) || 0;
@@ -1864,7 +1865,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 params.set('years', String(chartHistoryYears));
             }
 
-            const response = await authFetch(`/api/chart/${encodeURIComponent(code)}?${params.toString()}`, {
+            const chartEndpoint = chartDataSource === 'postgres' && isStaticStrategyChart
+                ? '/api/strategy-chart'
+                : '/api/chart';
+            const response = await authFetch(`${chartEndpoint}/${encodeURIComponent(code)}?${params.toString()}`, {
                 cache: 'no-store',
             });
 
