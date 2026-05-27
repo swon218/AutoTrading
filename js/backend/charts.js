@@ -9,12 +9,95 @@ const {
 } = require('./kiwoomUtils');
 
 const chartCache = new Map();
+const CHART_CANDLE_LIMIT = 1000;
 const DAILY_CHART_INTERVALS = new Set(['day', 'week', 'month']);
 const CHART_API_BY_INTERVAL = {
     day: 'ka10081',
     week: 'ka10082',
     month: 'ka10083',
 };
+
+function formatYmd(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
+}
+
+function getSettledBaseDate() {
+    const date = new Date();
+    const koreaNow = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Seoul' }));
+    const minutes = koreaNow.getHours() * 60 + koreaNow.getMinutes();
+
+    if (koreaNow.getDay() === 0) {
+        koreaNow.setDate(koreaNow.getDate() - 2);
+    } else if (koreaNow.getDay() === 6) {
+        koreaNow.setDate(koreaNow.getDate() - 1);
+    } else if (minutes < 16 * 60) {
+        koreaNow.setDate(koreaNow.getDate() - 1);
+        if (koreaNow.getDay() === 0) {
+            koreaNow.setDate(koreaNow.getDate() - 2);
+        } else if (koreaNow.getDay() === 6) {
+            koreaNow.setDate(koreaNow.getDate() - 1);
+        }
+    }
+
+    return formatYmd(koreaNow);
+}
+
+function filterCandlesByYears(candles, years) {
+    const yearsNumber = Number(years);
+    if (!Number.isFinite(yearsNumber) || yearsNumber <= 0) return candles;
+
+    const cutoff = new Date();
+    cutoff.setFullYear(cutoff.getFullYear() - yearsNumber);
+    const cutoffDate = cutoff.toISOString().slice(0, 10);
+    return candles.filter((candle) => String(candle.time || '').slice(0, 10) >= cutoffDate);
+}
+
+function normalizeDate(value) {
+    const text = String(value || '').trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+    if (/^\d{8}$/.test(text)) {
+        return `${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}`;
+    }
+    return '';
+}
+
+function dateToYmd(value) {
+    const date = normalizeDate(value);
+    return date ? date.replace(/-/g, '') : '';
+}
+
+function filterCandlesByDateRange(candles, startDate, endDate) {
+    const start = normalizeDate(startDate);
+    const end = normalizeDate(endDate);
+
+    return candles.filter((candle) => {
+        const date = String(candle.time || '').slice(0, 10);
+        if (!date) return false;
+        if (start && date < start) return false;
+        if (end && date > end) return false;
+        return true;
+    });
+}
+
+function isDateRangeWithinYears(startDate, endDate, years) {
+    const yearsNumber = Number(years);
+    if (!startDate || !endDate || !Number.isFinite(yearsNumber) || yearsNumber <= 0) return true;
+
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    const maxEndDate = new Date(startYear + yearsNumber, startMonth - 1, startDay);
+    const end = new Date(endYear, endMonth - 1, endDay);
+    return end <= maxEndDate;
+}
+
+function limitCandles(candles, limit) {
+    const count = Number(limit);
+    if (!Number.isFinite(count) || count <= 0) return candles;
+    return candles.slice(-Math.floor(count));
+}
 
 function toCandle(item, interval) {
     const timeSource = DAILY_CHART_INTERVALS.has(interval) ? item.dt : item.cntr_tm;
@@ -83,12 +166,29 @@ function aggregateIntradayCandles(candles, intervalMinutes) {
     return Array.from(buckets.values());
 }
 
-async function getChartData(query, interval = '1', credentials = null) {
+async function getChartData(query, interval = '1', credentials = null, options = {}) {
     const code = await resolveStockCode(query, credentials);
-    const normalizedInterval = ['1', '5', '15', '60', '120', 'day', 'week', 'month'].includes(interval) ? interval : '1';
-    const requestInterval = ['60', '120'].includes(normalizedInterval) ? '15' : normalizedInterval;
-    const aggregateMinutes = ['60', '120'].includes(normalizedInterval) ? Number(normalizedInterval) : null;
-    const cacheKey = `${code}:${normalizedInterval}`;
+    const normalizedInterval = ['1', '5', '15', '30', '60', '120', 'day', 'week', 'month'].includes(interval) ? interval : '1';
+    const requestInterval = normalizedInterval === '120' ? '60' : normalizedInterval;
+    const aggregateMinutes = normalizedInterval === '120' ? Number(normalizedInterval) : null;
+    const years = Number(options.years) || 0;
+    const hasLimitOption = options.limit !== undefined && options.limit !== null && options.limit !== '';
+    const limit = hasLimitOption ? Number(options.limit) : CHART_CANDLE_LIMIT;
+    const startDate = normalizeDate(options.startDate);
+    const endDate = normalizeDate(options.endDate);
+    const settled = Boolean(options.settled);
+    const requestedBaseDate = dateToYmd(endDate);
+    const baseDate = DAILY_CHART_INTERVALS.has(requestInterval)
+        ? requestedBaseDate || (settled ? getSettledBaseDate() : todayYmd())
+        : todayYmd();
+
+    if (!isDateRangeWithinYears(startDate, endDate, years)) {
+        const error = new Error(`${years} years of chart data are available at most.`);
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const cacheKey = `${code}:${normalizedInterval}:years=${years}:limit=${limit}:start=${startDate}:end=${endDate}:settled=${settled ? '1' : '0'}:base=${baseDate}`;
     const cached = chartCache.get(cacheKey);
     const now = Date.now();
 
@@ -98,7 +198,7 @@ async function getChartData(query, interval = '1', credentials = null) {
 
     const apiId = CHART_API_BY_INTERVAL[requestInterval] || 'ka10080';
     const body = DAILY_CHART_INTERVALS.has(requestInterval)
-        ? { stk_cd: code, base_dt: todayYmd(), upd_stkpc_tp: '1' }
+        ? { stk_cd: code, base_dt: baseDate, upd_stkpc_tp: '1' }
         : { stk_cd: code, tic_scope: requestInterval, upd_stkpc_tp: '1' };
 
     const payload = await requestKiwoomTr(apiId, body, '/api/dostk/chart', credentials);
@@ -107,7 +207,8 @@ async function getChartData(query, interval = '1', credentials = null) {
         throw new Error(payload.return_msg || `Chart request failed: ${JSON.stringify(payload)}`);
     }
 
-    const rawCandles = getChartItems(payload, requestInterval)
+    const chartItems = getChartItems(payload, requestInterval);
+    const rawCandles = chartItems
         .map((item) => toCandle(item, requestInterval))
         .filter((candle) => {
             return candle.time && candle.open !== null && candle.high !== null
@@ -115,8 +216,13 @@ async function getChartData(query, interval = '1', credentials = null) {
         })
         .reverse();
 
-    const candles = (aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles)
-        .slice(-180);
+    const aggregatedCandles = aggregateMinutes ? aggregateIntradayCandles(rawCandles, aggregateMinutes) : rawCandles;
+    const rangedCandles = filterCandlesByDateRange(
+        filterCandlesByYears(aggregatedCandles, years),
+        startDate,
+        endDate,
+    );
+    const candles = limitCandles(rangedCandles, limit);
 
     const data = {
         code,

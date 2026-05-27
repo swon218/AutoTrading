@@ -290,7 +290,13 @@ const server = http.createServer(async (request, response) => {
             const query = decodeURIComponent(chartMatch[1]);
             const interval = requestUrl.searchParams.get('interval') || '1';
             const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
-            const chart = await getChartData(query, interval, credentials);
+            const chart = await getChartData(query, interval, credentials, {
+                years: requestUrl.searchParams.get('years'),
+                limit: requestUrl.searchParams.get('limit'),
+                startDate: requestUrl.searchParams.get('startDate'),
+                endDate: requestUrl.searchParams.get('endDate'),
+                settled: requestUrl.searchParams.get('settled') === '1',
+            });
             sendJson(response, 200, chart);
         } catch (error) {
             sendJson(response, error.statusCode || 500, { message: error.message });
