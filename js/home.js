@@ -626,6 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchWatchlistStocks = async (query) => {
         const keyword = String(query || '').trim();
         if (!keyword) {
+            watchlistStockResults?.replaceChildren();
             watchlistStockResults?.classList.add('is-hidden');
             return;
         }
@@ -871,6 +872,7 @@ document.addEventListener('DOMContentLoaded', () => {
             name: result.dataset.watchlistSearchName,
         }], 'manual');
         watchlistStockSearch.value = '';
+        watchlistStockResults.replaceChildren();
         watchlistStockResults.classList.add('is-hidden');
     });
 
