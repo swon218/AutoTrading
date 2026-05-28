@@ -445,6 +445,10 @@ body.overflow-hidden {
     margin-top: 1rem;
 }
 
+.watchlist-selected-list.is-reordering {
+    cursor: grabbing;
+}
+
 .watchlist-empty {
     padding: 1.5rem 0.75rem;
     color: #94a3b8;
@@ -563,15 +567,27 @@ body.overflow-hidden {
     background-color: #172033;
     color: #f8fafc;
     padding: 0 0.65rem;
+    transition: background-color 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
 }
 
 .watchlist-selected-row.is-dragging {
-    opacity: 0.55;
+    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.12);
+    opacity: 0.72;
+    transform: scale(0.992);
 }
 
 .watchlist-selected-row > i {
     color: #64748b;
     cursor: grab;
+}
+
+.watchlist-selected-list.is-reordering .watchlist-selected-row:not(.is-dragging) {
+    border-color: #334155;
+}
+
+.watchlist-selected-list.is-reordering .watchlist-selected-row > i {
+    cursor: grabbing;
 }
 
 .watchlist-selected-rank {

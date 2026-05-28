@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingGroup = null;
     let editingItems = [];
     let watchlistSearchTimer = null;
+    let draggingWatchlistCode = '';
 
     const rankingTypeMeta = {
         realtime: { label: '실시간조회', apiId: 'ka00198' },
@@ -461,7 +462,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         watchlistSelectedList.innerHTML = editingItems.map((item, index) => `
-            <div class="watchlist-selected-row" draggable="true" data-editing-index="${index}">
+            <div class="watchlist-selected-row${item.code === draggingWatchlistCode ? ' is-dragging' : ''}" draggable="true" data-editing-index="${index}" data-editing-code="${escapeHtml(item.code)}">
                 <i class="fa-solid fa-grip-lines" aria-hidden="true"></i>
                 <span class="watchlist-selected-rank">${index + 1}</span>
                 <strong>${escapeHtml(item.name)}</strong>
@@ -766,28 +767,47 @@ document.addEventListener('DOMContentLoaded', () => {
     watchlistSelectedList?.addEventListener('dragstart', (event) => {
         const row = event.target.closest('[data-editing-index]');
         if (!row) return;
+        const index = Number(row.dataset.editingIndex);
+        draggingWatchlistCode = editingItems[index]?.code || '';
         event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData('text/plain', row.dataset.editingIndex);
+        event.dataTransfer.setData('text/plain', draggingWatchlistCode);
+        watchlistSelectedList.classList.add('is-reordering');
         row.classList.add('is-dragging');
     });
 
     watchlistSelectedList?.addEventListener('dragend', (event) => {
+        draggingWatchlistCode = '';
+        watchlistSelectedList.classList.remove('is-reordering');
         event.target.closest('[data-editing-index]')?.classList.remove('is-dragging');
+        renderEditingItems();
     });
 
     watchlistSelectedList?.addEventListener('dragover', (event) => {
-        if (event.target.closest('[data-editing-index]')) event.preventDefault();
+        const row = event.target.closest('[data-editing-index]');
+        if (!row || !draggingWatchlistCode) return;
+
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+
+        const fromIndex = editingItems.findIndex((item) => item.code === draggingWatchlistCode);
+        const hoverIndex = Number(row.dataset.editingIndex);
+        if (fromIndex < 0 || Number.isNaN(hoverIndex)) return;
+
+        const rect = row.getBoundingClientRect();
+        const insertAfter = event.clientY > rect.top + rect.height / 2;
+        let toIndex = hoverIndex + (insertAfter ? 1 : 0);
+        if (fromIndex < toIndex) toIndex -= 1;
+        if (fromIndex === toIndex) return;
+
+        const [moved] = editingItems.splice(fromIndex, 1);
+        editingItems.splice(toIndex, 0, moved);
+        renderEditingItems();
     });
 
     watchlistSelectedList?.addEventListener('drop', (event) => {
-        const row = event.target.closest('[data-editing-index]');
-        if (!row) return;
         event.preventDefault();
-        const fromIndex = Number(event.dataTransfer.getData('text/plain'));
-        const toIndex = Number(row.dataset.editingIndex);
-        if (fromIndex === toIndex || Number.isNaN(fromIndex) || Number.isNaN(toIndex)) return;
-        const [moved] = editingItems.splice(fromIndex, 1);
-        editingItems.splice(toIndex, 0, moved);
+        draggingWatchlistCode = '';
+        watchlistSelectedList.classList.remove('is-reordering');
         renderEditingItems();
     });
 
