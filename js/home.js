@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         volumeSpike: { label: '거래량 급증', apiId: 'ka10023' },
     };
     const WATCHLIST_ITEM_LIMIT = 20;
+    const FAST_WATCHLIST_SOURCE_TYPES = new Set(['realtime', 'gainers', 'losers', 'volume', 'volumeSpike']);
 
     const escapeHtml = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -314,6 +315,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const getFastWatchlistItems = async (group) => {
+        const savedItems = group?.items || [];
+        if (!savedItems.length) return [];
+
+        const sourceTypes = Array.from(new Set(savedItems.map((item) => item.sourceType || 'manual')));
+        const sourceType = sourceTypes[0];
+        if (sourceTypes.length !== 1 || !FAST_WATCHLIST_SOURCE_TYPES.has(sourceType)) return null;
+
+        const response = await authFetch(`/api/home-rankings?type=${encodeURIComponent(sourceType)}&limit=20`, {
+            cache: 'no-store',
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+
+        const rankingItemsByCode = new Map((payload.items || []).map((item) => [item.code, item]));
+        if (!savedItems.every((item) => rankingItemsByCode.has(item.code))) return null;
+
+        return savedItems.map((item, index) => ({
+            ...rankingItemsByCode.get(item.code),
+            rank: index + 1,
+        }));
+    };
+
     const loadWatchlistQuotes = async (groupId) => {
         if (!rankingList) return;
         const group = watchlistGroups.find((item) => item.id === groupId);
@@ -325,6 +349,12 @@ document.addEventListener('DOMContentLoaded', () => {
         setRankingStatus('관심 종목을 불러오는 중...', true);
 
         try {
+            const fastItems = await getFastWatchlistItems(group);
+            if (fastItems) {
+                renderRankingItems(fastItems, '', {});
+                return;
+            }
+
             const response = await authFetch(`/api/watchlists/${encodeURIComponent(groupId)}/quotes`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
