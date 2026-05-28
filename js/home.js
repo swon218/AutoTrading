@@ -474,6 +474,41 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
     };
 
+    const animateEditingReorder = (previousRects) => {
+        if (!watchlistSelectedList || !previousRects?.size) return;
+
+        const rows = Array.from(watchlistSelectedList.querySelectorAll('[data-editing-code]'));
+        rows.forEach((row) => {
+            const previousRect = previousRects.get(row.dataset.editingCode);
+            if (!previousRect) return;
+
+            const nextRect = row.getBoundingClientRect();
+            const deltaY = previousRect.top - nextRect.top;
+            if (Math.abs(deltaY) < 1) return;
+
+            row.style.transition = 'none';
+            row.style.transform = `translateY(${deltaY}px)`;
+            row.getBoundingClientRect();
+            requestAnimationFrame(() => {
+                row.style.transition = '';
+                row.style.transform = '';
+            });
+        });
+    };
+
+    const renderEditingItemsWithMotion = (previousRects) => {
+        renderEditingItems();
+        requestAnimationFrame(() => animateEditingReorder(previousRects));
+    };
+
+    const getEditingRowRects = () => {
+        if (!watchlistSelectedList) return new Map();
+        return new Map(Array.from(watchlistSelectedList.querySelectorAll('[data-editing-code]')).map((row) => [
+            row.dataset.editingCode,
+            row.getBoundingClientRect(),
+        ]));
+    };
+
     const createWatchlistGroup = async () => {
         const name = watchlistGroupName?.value.trim();
         if (!name) {
@@ -799,9 +834,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (fromIndex < toIndex) toIndex -= 1;
         if (fromIndex === toIndex) return;
 
+        const previousRects = getEditingRowRects();
         const [moved] = editingItems.splice(fromIndex, 1);
         editingItems.splice(toIndex, 0, moved);
-        renderEditingItems();
+        renderEditingItemsWithMotion(previousRects);
     });
 
     watchlistSelectedList?.addEventListener('drop', (event) => {

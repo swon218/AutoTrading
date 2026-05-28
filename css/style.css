@@ -567,7 +567,7 @@ body.overflow-hidden {
     background-color: #172033;
     color: #f8fafc;
     padding: 0 0.65rem;
-    transition: background-color 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
+    transition: background-color 0.16s ease, border-color 0.16s ease, opacity 0.16s ease, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .watchlist-selected-row.is-dragging {
