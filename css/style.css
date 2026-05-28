@@ -873,7 +873,9 @@ body.overflow-hidden {
     align-items: center;
     justify-content: flex-end;
     min-width: 0;
+    overflow: hidden;
     text-align: right;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
 

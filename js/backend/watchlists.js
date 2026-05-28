@@ -6,6 +6,34 @@ const {
 const { getStockInfo } = require('./stocks');
 
 const WATCHLIST_ITEM_LIMIT = 20;
+const WATCHLIST_QUOTE_DELAY_MS = 500;
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRateLimitError(error) {
+    return String(error?.message || error || '').includes('429')
+        || String(error?.message || error || '').includes('허용된 요청개수');
+}
+
+function getQuoteErrorMetric(error) {
+    if (isRateLimitError(error)) {
+        return '요청 제한';
+    }
+
+    return '조회 실패';
+}
+
+async function getStockInfoWithRateLimit(stockCode, credentials) {
+    try {
+        return await getStockInfo(stockCode, credentials);
+    } catch (error) {
+        if (!isRateLimitError(error)) throw error;
+        await delay(1500);
+        return getStockInfo(stockCode, credentials);
+    }
+}
 
 function getServiceHeaders(config, extra = {}) {
     return {
@@ -218,10 +246,16 @@ async function getWatchlistQuotes(request, groupId, requestUrl, credentials) {
         .filter((item) => item.group_id === groupId)
         .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
-    const items = await Promise.all(sortedItems.map(async (item, index) => {
+    const items = [];
+
+    for (const [index, item] of sortedItems.entries()) {
+        if (index > 0) {
+            await delay(WATCHLIST_QUOTE_DELAY_MS);
+        }
+
         try {
-            const stock = await getStockInfo(item.stock_code, credentials);
-            return {
+            const stock = await getStockInfoWithRateLimit(item.stock_code, credentials);
+            items.push({
                 rank: index + 1,
                 code: stock.code || item.stock_code,
                 name: stock.name || item.stock_name,
@@ -230,9 +264,9 @@ async function getWatchlistQuotes(request, groupId, requestUrl, credentials) {
                 changeRate: stock.changeRate,
                 volume: stock.volume,
                 direction: stock.direction,
-            };
+            });
         } catch (error) {
-            return {
+            items.push({
                 rank: index + 1,
                 code: item.stock_code,
                 name: item.stock_name,
@@ -241,10 +275,10 @@ async function getWatchlistQuotes(request, groupId, requestUrl, credentials) {
                 changeRate: null,
                 volume: null,
                 direction: 'flat',
-                metric: error.message || '조회 실패',
-            };
+                metric: getQuoteErrorMetric(error),
+            });
         }
-    }));
+    }
 
     return {
         group: toGroupDto(group, sortedItems),
