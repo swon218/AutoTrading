@@ -126,9 +126,9 @@ body.overflow-hidden {
 .home-watchlist-tabs {
     position: relative;
     flex: 1;
-    justify-content: center;
+    justify-content: flex-end;
     overflow: hidden;
-    padding: 0 2.2rem 0 0.35rem;
+    padding: 0;
 }
 
 .home-ranking-tab {
@@ -164,7 +164,6 @@ body.overflow-hidden {
     gap: 0.4rem;
     flex: 0 0 auto;
     min-width: 7rem;
-    order: 1;
 }
 
 .watchlist-manage-tab i {
@@ -172,13 +171,16 @@ body.overflow-hidden {
 }
 
 .watchlist-tabs-viewport {
-    order: 2;
-    flex: 1;
+    flex: 0 1 calc((5 * 5.75rem) + (4 * 0.55rem));
     min-width: 0;
-    max-width: none;
+    max-width: calc((5 * 5.75rem) + (4 * 0.55rem));
     overflow-x: auto;
     scroll-behavior: smooth;
-    scrollbar-width: thin;
+    scrollbar-width: none;
+}
+
+.watchlist-tabs-viewport::-webkit-scrollbar {
+    display: none;
 }
 
 .watchlist-tabs-track {
@@ -194,12 +196,10 @@ body.overflow-hidden {
 }
 
 .watchlist-scroll-button {
-    position: absolute;
-    top: 50%;
-    z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
     width: 1.8rem;
     height: 1.8rem;
     border: 1px solid #334155;
@@ -209,16 +209,7 @@ body.overflow-hidden {
     cursor: pointer;
     opacity: 0;
     pointer-events: none;
-    transform: translateY(-50%);
     transition: opacity 0.16s ease, background-color 0.16s ease, color 0.16s ease;
-}
-
-.watchlist-scroll-button.is-left {
-    left: 7.55rem;
-}
-
-.watchlist-scroll-button.is-right {
-    right: 0;
 }
 
 .home-watchlist-tabs:hover .watchlist-scroll-button,

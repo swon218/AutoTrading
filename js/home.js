@@ -413,12 +413,12 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
 
         watchlistGroupTabs.innerHTML = `
+            <button class="watchlist-scroll-button is-left" type="button" data-watchlist-scroll="-1" aria-label="관심 그룹 왼쪽으로 이동">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
             <button id="watchlistManageButton" class="home-ranking-tab watchlist-manage-tab" type="button" title="관심 그룹 관리">
                 <i class="fa-solid fa-star" aria-hidden="true"></i>
                 관심 그룹 +
-            </button>
-            <button class="watchlist-scroll-button is-left" type="button" data-watchlist-scroll="-1" aria-label="관심 그룹 왼쪽으로 이동">
-                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
             </button>
             <div class="watchlist-tabs-viewport">
                 <div class="watchlist-tabs-track">${tabs}</div>
@@ -771,9 +771,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const scrollButton = event.target.closest('[data-watchlist-scroll]');
         if (scrollButton) {
             const viewport = watchlistGroupTabs.querySelector('.watchlist-tabs-viewport');
+            const track = watchlistGroupTabs.querySelector('.watchlist-tabs-track');
+            if (!viewport || !track || track.scrollWidth <= viewport.clientWidth + 2) return;
             const direction = Number(scrollButton.dataset.watchlistScroll || 1);
-            viewport?.scrollBy({
-                left: direction * Math.max(160, viewport.clientWidth * 0.7),
+            viewport.scrollBy({
+                left: direction * viewport.clientWidth,
                 behavior: 'smooth',
             });
             return;
