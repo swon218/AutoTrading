@@ -3,10 +3,12 @@ const {
     getBackendSupabaseConfig,
     requestSupabaseJson,
 } = require('./userCredentials');
+const { getHomeRanking } = require('./rankings');
 const { getStockInfo } = require('./stocks');
 
 const WATCHLIST_ITEM_LIMIT = 20;
 const WATCHLIST_QUOTE_DELAY_MS = 500;
+const RANKING_SOURCE_TYPES = new Set(['realtime', 'gainers', 'losers', 'volume', 'volumeSpike']);
 
 function delay(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,6 +35,70 @@ async function getStockInfoWithRateLimit(stockCode, credentials) {
         await delay(1500);
         return getStockInfo(stockCode, credentials);
     }
+}
+
+function toRankingQuoteItem(savedItem, rankingItem, index) {
+    return {
+        rank: index + 1,
+        code: rankingItem.code || savedItem.stock_code,
+        name: rankingItem.name || savedItem.stock_name,
+        price: rankingItem.price,
+        change: rankingItem.change,
+        changeRate: rankingItem.changeRate,
+        volume: rankingItem.volume,
+        direction: rankingItem.direction,
+        metric: rankingItem.metric,
+    };
+}
+
+async function getRankingBackedWatchlistQuotes(sortedItems, credentials) {
+    const sourceTypes = Array.from(new Set(sortedItems.map((item) => item.source_type || 'manual')));
+    if (sourceTypes.length !== 1 || !RANKING_SOURCE_TYPES.has(sourceTypes[0])) return null;
+
+    const ranking = await getHomeRanking(sourceTypes[0], WATCHLIST_ITEM_LIMIT, credentials);
+    const rankingItemsByCode = new Map((ranking.items || []).map((item) => [item.code, item]));
+
+    if (!sortedItems.every((item) => rankingItemsByCode.has(item.stock_code))) return null;
+
+    return sortedItems.map((item, index) => toRankingQuoteItem(item, rankingItemsByCode.get(item.stock_code), index));
+}
+
+async function getIndividualWatchlistQuotes(sortedItems, credentials) {
+    const items = [];
+
+    for (const [index, item] of sortedItems.entries()) {
+        if (index > 0) {
+            await delay(WATCHLIST_QUOTE_DELAY_MS);
+        }
+
+        try {
+            const stock = await getStockInfoWithRateLimit(item.stock_code, credentials);
+            items.push({
+                rank: index + 1,
+                code: stock.code || item.stock_code,
+                name: stock.name || item.stock_name,
+                price: stock.price,
+                change: stock.change,
+                changeRate: stock.changeRate,
+                volume: stock.volume,
+                direction: stock.direction,
+            });
+        } catch (error) {
+            items.push({
+                rank: index + 1,
+                code: item.stock_code,
+                name: item.stock_name,
+                price: null,
+                change: null,
+                changeRate: null,
+                volume: null,
+                direction: 'flat',
+                metric: getQuoteErrorMetric(error),
+            });
+        }
+    }
+
+    return items;
 }
 
 function getServiceHeaders(config, extra = {}) {
@@ -246,39 +312,8 @@ async function getWatchlistQuotes(request, groupId, requestUrl, credentials) {
         .filter((item) => item.group_id === groupId)
         .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
-    const items = [];
-
-    for (const [index, item] of sortedItems.entries()) {
-        if (index > 0) {
-            await delay(WATCHLIST_QUOTE_DELAY_MS);
-        }
-
-        try {
-            const stock = await getStockInfoWithRateLimit(item.stock_code, credentials);
-            items.push({
-                rank: index + 1,
-                code: stock.code || item.stock_code,
-                name: stock.name || item.stock_name,
-                price: stock.price,
-                change: stock.change,
-                changeRate: stock.changeRate,
-                volume: stock.volume,
-                direction: stock.direction,
-            });
-        } catch (error) {
-            items.push({
-                rank: index + 1,
-                code: item.stock_code,
-                name: item.stock_name,
-                price: null,
-                change: null,
-                changeRate: null,
-                volume: null,
-                direction: 'flat',
-                metric: getQuoteErrorMetric(error),
-            });
-        }
-    }
+    const items = await getRankingBackedWatchlistQuotes(sortedItems, credentials)
+        || await getIndividualWatchlistQuotes(sortedItems, credentials);
 
     return {
         group: toGroupDto(group, sortedItems),
