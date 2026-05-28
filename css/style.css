@@ -573,18 +573,27 @@ body.overflow-hidden {
     margin-bottom: 1rem;
 }
 
+.watchlist-editor-head > div {
+    width: 14.5rem;
+}
+
 .watchlist-editor-tools {
     flex-wrap: wrap;
     margin-bottom: 0.75rem;
+    padding-left: calc(2.15rem + 0.75rem);
 }
 
 .watchlist-editor-field {
     display: inline-flex;
     align-items: center;
-    gap: 0.55rem;
+    gap: 0;
     color: #cbd5e1;
     font-size: 0.86rem;
     font-weight: 900;
+}
+
+.watchlist-editor-field span {
+    display: none;
 }
 
 .watchlist-editor-field select {
