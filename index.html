@@ -97,14 +97,20 @@
                         <button class="home-ranking-tab" type="button" data-ranking-type="movers">상승률/하락률</button>
                         <button class="home-ranking-tab" type="button" data-ranking-type="volume">거래량 상위</button>
                         <button class="home-ranking-tab" type="button" data-ranking-type="volumeSpike">거래량 급증</button>
-                        <button class="home-ranking-tab" type="button" data-ranking-type="domesticTradeTop">개인/기관 매매상위</button>
-                        <button class="home-ranking-tab" type="button" data-ranking-type="foreignInstitutionTop">외국인/기관 매매상위</button>
-                        <button class="home-ranking-tab" type="button" data-ranking-type="sector">섹터상위</button>
                     </div>
                     <div id="watchlistGroupTabs" class="home-watchlist-tabs" aria-label="관심 그룹">
                         <button id="watchlistManageButton" class="home-ranking-tab watchlist-manage-tab" type="button" title="관심 그룹 관리">
                             <i class="fa-solid fa-star" aria-hidden="true"></i>
                             관심 그룹 +
+                        </button>
+                        <button class="watchlist-scroll-button is-left" type="button" data-watchlist-scroll="-1" aria-label="관심 그룹 왼쪽으로 이동">
+                            <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                        </button>
+                        <div class="watchlist-tabs-viewport">
+                            <div class="watchlist-tabs-track"></div>
+                        </div>
+                        <button class="watchlist-scroll-button is-right" type="button" data-watchlist-scroll="1" aria-label="관심 그룹 오른쪽으로 이동">
+                            <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -168,9 +174,6 @@
                             <option value="losers">하락률</option>
                             <option value="volume">거래량 상위</option>
                             <option value="volumeSpike">거래량 급증</option>
-                            <option value="domesticTradeTop">개인/기관 매매상위</option>
-                            <option value="foreignInstitutionTop">외국인/기관 매매상위</option>
-                            <option value="sector">섹터상위</option>
                         </select>
                     </label>
                 </div>

@@ -55,9 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         losers: { label: '하락률', apiId: 'ka10027' },
         volume: { label: '거래량 상위', apiId: 'ka10030' },
         volumeSpike: { label: '거래량 급증', apiId: 'ka10023' },
-        domesticTradeTop: { label: '개인/기관 매매상위', apiId: 'ka10065' },
-        foreignInstitutionTop: { label: '외국인/기관 매매상위', apiId: 'ka90009' },
-        sector: { label: '섹터상위', apiId: 'ka20003' },
     };
     const WATCHLIST_ITEM_LIMIT = 20;
 
@@ -416,10 +413,18 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
 
         watchlistGroupTabs.innerHTML = `
-            ${tabs}
             <button id="watchlistManageButton" class="home-ranking-tab watchlist-manage-tab" type="button" title="관심 그룹 관리">
                 <i class="fa-solid fa-star" aria-hidden="true"></i>
                 관심 그룹 +
+            </button>
+            <button class="watchlist-scroll-button is-left" type="button" data-watchlist-scroll="-1" aria-label="관심 그룹 왼쪽으로 이동">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <div class="watchlist-tabs-viewport">
+                <div class="watchlist-tabs-track">${tabs}</div>
+            </div>
+            <button class="watchlist-scroll-button is-right" type="button" data-watchlist-scroll="1" aria-label="관심 그룹 오른쪽으로 이동">
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
             </button>
         `;
     };
@@ -760,6 +765,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const manageButton = event.target.closest('#watchlistManageButton');
         if (manageButton) {
             openWatchlistModal();
+            return;
+        }
+
+        const scrollButton = event.target.closest('[data-watchlist-scroll]');
+        if (scrollButton) {
+            const viewport = watchlistGroupTabs.querySelector('.watchlist-tabs-viewport');
+            const direction = Number(scrollButton.dataset.watchlistScroll || 1);
+            viewport?.scrollBy({
+                left: direction * Math.max(160, viewport.clientWidth * 0.7),
+                behavior: 'smooth',
+            });
             return;
         }
 

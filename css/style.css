@@ -104,7 +104,7 @@ body.overflow-hidden {
     gap: 0.55rem;
     min-height: 3.5rem;
     padding: 0.55rem;
-    overflow-x: auto;
+    overflow: hidden;
     background-color: #111827;
     border: 1px solid #263245;
     border-radius: 0.5rem;
@@ -119,16 +119,16 @@ body.overflow-hidden {
 }
 
 .home-ranking-tabs-main {
-    flex: 1;
+    flex: 0 0 auto;
     overflow-x: auto;
 }
 
 .home-watchlist-tabs {
-    border-left: 1px solid #263245;
-    flex: 0 0 auto;
-    max-width: 45%;
-    overflow-x: auto;
-    padding-left: 0.55rem;
+    position: relative;
+    flex: 1;
+    justify-content: center;
+    overflow: hidden;
+    padding-left: 0.35rem;
 }
 
 .home-ranking-tab {
@@ -162,11 +162,73 @@ body.overflow-hidden {
 
 .watchlist-manage-tab {
     gap: 0.4rem;
+    flex: 0 0 auto;
     min-width: 7rem;
+    order: 1;
 }
 
 .watchlist-manage-tab i {
     color: #f59e0b;
+}
+
+.watchlist-tabs-viewport {
+    order: 2;
+    min-width: 0;
+    max-width: min(36rem, 100%);
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+}
+
+.watchlist-tabs-track {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: max-content;
+    min-width: 100%;
+}
+
+.watchlist-tab {
+    flex: 0 0 auto;
+}
+
+.watchlist-scroll-button {
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 1px solid #334155;
+    border-radius: 0.4rem;
+    background-color: rgba(15, 23, 42, 0.92);
+    color: #cbd5e1;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+    transition: opacity 0.16s ease, background-color 0.16s ease, color 0.16s ease;
+}
+
+.watchlist-scroll-button.is-left {
+    left: 7.35rem;
+}
+
+.watchlist-scroll-button.is-right {
+    right: 0.15rem;
+}
+
+.home-watchlist-tabs:hover .watchlist-scroll-button,
+.watchlist-scroll-button:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.watchlist-scroll-button:hover {
+    background-color: #1e293b;
+    color: #ffffff;
 }
 
 .home-ranking-panel {
