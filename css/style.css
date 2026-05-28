@@ -381,7 +381,7 @@ body.overflow-hidden {
 }
 
 .watchlist-editor-head input {
-    width: min(14.5rem, 100%);
+    width: 14.5rem;
     padding: 0 0.8rem;
 }
 
@@ -426,15 +426,15 @@ body.overflow-hidden {
 }
 
 .watchlist-danger-button {
-    border-color: #ef4444;
-    background-color: #fee2e2;
-    color: #991b1b;
+    border-color: #dc2626;
+    background-color: #dc2626;
+    color: #ffffff;
 }
 
 .watchlist-danger-button:hover {
-    border-color: #f87171;
-    background-color: #fecaca;
-    color: #7f1d1d;
+    border-color: #b91c1c;
+    background-color: #b91c1c;
+    color: #ffffff;
 }
 
 .watchlist-group-list,

@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         foreignInstitutionTop: { label: '외국인/기관 매매상위', apiId: 'ka90009' },
         sector: { label: '섹터상위', apiId: 'ka20003' },
     };
+    const WATCHLIST_ITEM_LIMIT = 20;
 
     const escapeHtml = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -365,6 +366,10 @@ document.addEventListener('DOMContentLoaded', () => {
         sortOrder: index,
     }));
 
+    const showWatchlistLimitMessage = () => {
+        alert(`관심 그룹에는 최대 ${WATCHLIST_ITEM_LIMIT}개 종목만 담을 수 있습니다.`);
+    };
+
     const normalizeWatchlistItems = (items = [], sourceType = 'manual') => {
         const seenCodes = new Set();
         return items
@@ -381,15 +386,24 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const dedupeAppendEditingItems = (items = [], sourceType = 'manual') => {
+        if (editingItems.length >= WATCHLIST_ITEM_LIMIT) {
+            showWatchlistLimitMessage();
+            return;
+        }
+
         const existingCodes = new Set(editingItems.map((item) => item.code));
         const additions = normalizeWatchlistItems(items, sourceType)
             .filter((item) => !existingCodes.has(item.code));
+        const availableSlots = WATCHLIST_ITEM_LIMIT - editingItems.length;
+        if (additions.length > availableSlots) showWatchlistLimitMessage();
         editingItems = [...editingItems, ...additions];
+        editingItems = editingItems.slice(0, WATCHLIST_ITEM_LIMIT);
         renderEditingItems();
     };
 
     const replaceEditingItems = (items = [], sourceType = 'manual') => {
-        editingItems = normalizeWatchlistItems(items, sourceType);
+        const normalizedItems = normalizeWatchlistItems(items, sourceType);
+        editingItems = normalizedItems.slice(0, WATCHLIST_ITEM_LIMIT);
         renderEditingItems();
     };
 
@@ -548,6 +562,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveEditingGroup = async () => {
         if (!editingGroup) return;
         const name = watchlistEditName?.value.trim() || editingGroup.name;
+        if (editingItems.length > WATCHLIST_ITEM_LIMIT) {
+            showWatchlistLimitMessage();
+            return;
+        }
+
         const response = await authFetch(`/api/watchlists/${encodeURIComponent(editingGroup.id)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },

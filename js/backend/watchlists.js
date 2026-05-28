@@ -5,6 +5,8 @@ const {
 } = require('./userCredentials');
 const { getStockInfo } = require('./stocks');
 
+const WATCHLIST_ITEM_LIMIT = 20;
+
 function getServiceHeaders(config, extra = {}) {
     return {
         apikey: config.serviceKey,
@@ -70,7 +72,7 @@ function assertItems(items) {
             seen.add(item.stock_code);
             return true;
         })
-        .slice(0, 100)
+        .slice(0, WATCHLIST_ITEM_LIMIT)
         .map((item, index) => ({
             ...item,
             sort_order: index,
