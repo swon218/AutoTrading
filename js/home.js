@@ -315,13 +315,36 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const getPrimaryFastWatchlistSourceType = (savedItems = []) => {
+        const counts = new Map();
+        savedItems.forEach((item) => {
+            const sourceType = item.sourceType || 'manual';
+            if (!FAST_WATCHLIST_SOURCE_TYPES.has(sourceType)) return;
+            counts.set(sourceType, (counts.get(sourceType) || 0) + 1);
+        });
+
+        return Array.from(counts.entries())
+            .sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    };
+
+    const getPendingWatchlistItem = (item, index) => ({
+        rank: index + 1,
+        code: item.code,
+        name: item.name,
+        price: null,
+        change: null,
+        changeRate: null,
+        volume: null,
+        direction: 'flat',
+        metric: '조회 중',
+    });
+
     const getFastWatchlistItems = async (group) => {
         const savedItems = group?.items || [];
-        if (!savedItems.length) return [];
+        if (!savedItems.length) return { items: [], missingItems: [] };
 
-        const sourceTypes = Array.from(new Set(savedItems.map((item) => item.sourceType || 'manual')));
-        const sourceType = sourceTypes[0];
-        if (sourceTypes.length !== 1 || !FAST_WATCHLIST_SOURCE_TYPES.has(sourceType)) return null;
+        const sourceType = getPrimaryFastWatchlistSourceType(savedItems);
+        if (!sourceType) return null;
 
         const response = await authFetch(`/api/home-rankings?type=${encodeURIComponent(sourceType)}&limit=20`, {
             cache: 'no-store',
@@ -330,12 +353,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
 
         const rankingItemsByCode = new Map((payload.items || []).map((item) => [item.code, item]));
-        if (!savedItems.every((item) => rankingItemsByCode.has(item.code))) return null;
+        const missingItems = [];
+        const items = savedItems.map((item, index) => {
+            const rankingItem = rankingItemsByCode.get(item.code);
+            if (rankingItem) {
+                return {
+                    ...rankingItem,
+                    rank: index + 1,
+                };
+            }
 
-        return savedItems.map((item, index) => ({
-            ...rankingItemsByCode.get(item.code),
-            rank: index + 1,
+            missingItems.push({ ...item, index });
+            return getPendingWatchlistItem(item, index);
+        });
+
+        return { items, missingItems };
+    };
+
+    const hydrateMissingFastWatchlistItems = async (groupId, renderedItems, missingItems = []) => {
+        if (!missingItems.length) return;
+
+        const hydratedItems = [...renderedItems];
+        await Promise.all(missingItems.map(async (item) => {
+            try {
+                const response = await authFetch(`/api/stock/${encodeURIComponent(item.code)}`, { cache: 'no-store' });
+                const stock = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(stock.message || `HTTP ${response.status}`);
+                hydratedItems[item.index] = {
+                    rank: item.index + 1,
+                    code: stock.code || item.code,
+                    name: stock.name || item.name,
+                    price: stock.price,
+                    change: stock.change,
+                    changeRate: stock.changeRate,
+                    volume: stock.volume,
+                    direction: stock.direction,
+                };
+            } catch (error) {
+                hydratedItems[item.index] = {
+                    ...getPendingWatchlistItem(item, item.index),
+                    metric: error.message?.includes('429') ? '요청 제한' : '조회 실패',
+                };
+            }
         }));
+
+        if (activeWatchlistId === groupId) {
+            renderRankingItems(hydratedItems, '', {});
+        }
     };
 
     const loadWatchlistQuotes = async (groupId) => {
@@ -349,9 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
         setRankingStatus('관심 종목을 불러오는 중...', true);
 
         try {
-            const fastItems = await getFastWatchlistItems(group);
-            if (fastItems) {
-                renderRankingItems(fastItems, '', {});
+            const fastResult = await getFastWatchlistItems(group);
+            if (fastResult) {
+                renderRankingItems(fastResult.items, '', {});
+                hydrateMissingFastWatchlistItems(groupId, fastResult.items, fastResult.missingItems);
                 return;
             }
 
