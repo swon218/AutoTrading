@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const watchlistSelectedList = document.getElementById('watchlistSelectedList');
     const watchlistSaveButton = document.getElementById('watchlistSaveButton');
     const watchlistDeleteButton = document.getElementById('watchlistDeleteButton');
+    const watchlistResetButton = document.getElementById('watchlistResetButton');
 
     let searchTimer = null;
     let latestResults = [];
@@ -364,17 +365,31 @@ document.addEventListener('DOMContentLoaded', () => {
         sortOrder: index,
     }));
 
-    const dedupeAppendEditingItems = (items = [], sourceType = 'manual') => {
-        const existingCodes = new Set(editingItems.map((item) => item.code));
-        const additions = items
+    const normalizeWatchlistItems = (items = [], sourceType = 'manual') => {
+        const seenCodes = new Set();
+        return items
             .map((item) => ({
                 code: String(item.code || '').replace(/^A/i, '').trim(),
                 name: String(item.name || '').trim(),
                 sourceType,
             }))
-            .filter((item) => item.code && item.name && !existingCodes.has(item.code));
+            .filter((item) => {
+                if (!item.code || !item.name || seenCodes.has(item.code)) return false;
+                seenCodes.add(item.code);
+                return true;
+            });
+    };
 
+    const dedupeAppendEditingItems = (items = [], sourceType = 'manual') => {
+        const existingCodes = new Set(editingItems.map((item) => item.code));
+        const additions = normalizeWatchlistItems(items, sourceType)
+            .filter((item) => !existingCodes.has(item.code));
         editingItems = [...editingItems, ...additions];
+        renderEditingItems();
+    };
+
+    const replaceEditingItems = (items = [], sourceType = 'manual') => {
+        editingItems = normalizeWatchlistItems(items, sourceType);
         renderEditingItems();
     };
 
@@ -604,7 +619,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await authFetch(`/api/home-rankings?type=${encodeURIComponent(type)}&limit=20`, { cache: 'no-store' });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
-        dedupeAppendEditingItems(payload.items || [], type);
+        replaceEditingItems(payload.items || [], type);
     };
 
     if (profileBtn && profileMenu) {
@@ -768,7 +783,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     watchlistSourceType?.addEventListener('change', () => {
-        if (watchlistSourceType.value === 'manual') return;
+        if (watchlistSourceType.value === 'manual') {
+            editingItems = [];
+            renderEditingItems();
+            return;
+        }
         loadSourceRankingIntoEditor().catch((error) => {
             console.error('Watchlist source load failed.', error);
             alert(error.message || '종목모음을 불러오지 못했습니다.');
@@ -847,11 +866,22 @@ document.addEventListener('DOMContentLoaded', () => {
         renderEditingItems();
     });
 
-    watchlistSaveButton?.addEventListener('click', () => {
-        saveEditingGroup().catch((error) => {
+    watchlistSaveButton?.addEventListener('click', async () => {
+        try {
+            await saveEditingGroup();
+            alert('관심 그룹이 저장되었습니다.');
+        } catch (error) {
             console.error('Watchlist save failed.', error);
             alert(error.message || '관심 그룹을 저장하지 못했습니다.');
-        });
+        }
+    });
+
+    watchlistResetButton?.addEventListener('click', () => {
+        editingItems = [];
+        if (watchlistSourceType) watchlistSourceType.value = 'manual';
+        if (watchlistStockSearch) watchlistStockSearch.value = '';
+        watchlistStockResults?.classList.add('is-hidden');
+        renderEditingItems();
     });
 
     watchlistDeleteButton?.addEventListener('click', () => {
