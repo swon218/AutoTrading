@@ -31,7 +31,7 @@ const {
     updateWatchlist,
 } = require('./backend/watchlists');
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || 3001);
 
 function parseRequestBody(request) {
     return new Promise((resolve, reject) => {
