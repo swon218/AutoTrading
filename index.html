@@ -90,18 +90,26 @@
         </aside>
 
         <main class="app-main home-main flex-1 overflow-hidden">
-            <section class="home-ranking-shell" aria-label="홈 종목 랭킹">
+            <section id="homeRankingShell" class="home-ranking-shell" aria-label="홈 종목 랭킹">
                 <div class="home-ranking-tabs" role="tablist" aria-label="랭킹 종류">
-                    <button class="home-ranking-tab is-active" type="button" data-ranking-type="realtime">실시간조회</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="movers">상승률/하락률</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="volume">거래량 상위</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="volumeSpike">거래량 급증</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="domesticTradeTop">개인/기관 매매상위</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="foreignInstitutionTop">외국인/기관 매매상위</button>
-                    <button class="home-ranking-tab" type="button" data-ranking-type="sector">섹터상위</button>
+                    <div class="home-ranking-tabs-main">
+                        <button class="home-ranking-tab is-active" type="button" data-ranking-type="realtime">실시간조회</button>
+                        <button class="home-ranking-tab" type="button" data-ranking-type="movers">상승률/하락률</button>
+                        <button class="home-ranking-tab" type="button" data-ranking-type="volume">거래량 상위</button>
+                        <button class="home-ranking-tab" type="button" data-ranking-type="volumeSpike">거래량 급증</button>
+                        <button class="home-ranking-tab" type="button" data-ranking-type="domesticTradeTop">개인/기관 매매상위</button>
+                        <button class="home-ranking-tab" type="button" data-ranking-type="foreignInstitutionTop">외국인/기관 매매상위</button>
+                        <button class="home-ranking-tab" type="button" data-ranking-type="sector">섹터상위</button>
+                    </div>
+                    <div id="watchlistGroupTabs" class="home-watchlist-tabs" aria-label="관심 그룹">
+                        <button id="watchlistManageButton" class="home-ranking-tab watchlist-manage-tab" type="button" title="관심 그룹 관리">
+                            <i class="fa-solid fa-star" aria-hidden="true"></i>
+                            관심 그룹 +
+                        </button>
+                    </div>
                 </div>
 
-                <div class="home-ranking-panel">
+                <div id="homeRankingView" class="home-ranking-panel">
                     <div class="home-ranking-panel-head">
                         <div>
                             <h1 id="homeRankingTitle">실시간조회</h1>
@@ -121,6 +129,66 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <div id="watchlistGroupModal" class="watchlist-modal hidden" role="dialog" aria-modal="true" aria-labelledby="watchlistGroupModalTitle">
+        <div class="watchlist-modal-card">
+            <div class="watchlist-modal-head">
+                <h2 id="watchlistGroupModalTitle">관심 그룹 관리</h2>
+                <button id="watchlistGroupModalClose" type="button" class="watchlist-modal-close" aria-label="닫기">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+
+            <div id="watchlistListPane" class="watchlist-pane">
+                <div class="watchlist-modal-form">
+                    <input id="watchlistGroupName" type="text" placeholder="그룹 이름 (예: 내 관심주)" autocomplete="off">
+                    <button id="watchlistGroupAddBtn" type="button" class="watchlist-modal-add">+ 그룹 추가</button>
+                </div>
+                <div id="watchlistGroupList" class="watchlist-group-list"></div>
+            </div>
+
+            <div id="watchlistEditPane" class="watchlist-pane is-hidden">
+                <div class="watchlist-editor-head">
+                    <button id="watchlistEditBack" type="button" class="watchlist-editor-back" aria-label="관심 그룹 목록으로 돌아가기">
+                        <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+                    </button>
+                    <div>
+                        <h3 id="watchlistEditTitle">관심 그룹</h3>
+                        <input id="watchlistEditName" type="text" placeholder="그룹 이름" autocomplete="off">
+                    </div>
+                </div>
+
+                <div class="watchlist-editor-tools">
+                    <label class="watchlist-editor-field">
+                        <span>종류</span>
+                        <select id="watchlistSourceType">
+                            <option value="manual">직접 추가</option>
+                            <option value="realtime">실시간조회</option>
+                            <option value="movers">상승률/하락률</option>
+                            <option value="volume">거래량 상위</option>
+                            <option value="volumeSpike">거래량 급증</option>
+                            <option value="domesticTradeTop">개인/기관 매매상위</option>
+                            <option value="foreignInstitutionTop">외국인/기관 매매상위</option>
+                            <option value="sector">섹터상위</option>
+                        </select>
+                    </label>
+                    <button id="watchlistSourceLoad" type="button" class="watchlist-secondary-button">종목모음 추가</button>
+                </div>
+
+                <div class="watchlist-stock-search">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input id="watchlistStockSearch" type="text" placeholder="추가할 종목명 또는 종목코드 검색" autocomplete="off">
+                </div>
+                <div id="watchlistStockResults" class="watchlist-stock-results is-hidden"></div>
+                <div id="watchlistSelectedList" class="watchlist-selected-list"></div>
+
+                <div class="watchlist-editor-actions">
+                    <button id="watchlistDeleteButton" type="button" class="watchlist-danger-button">삭제</button>
+                    <button id="watchlistSaveButton" type="button" class="watchlist-modal-add">저장</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="js/authModal.js"></script>

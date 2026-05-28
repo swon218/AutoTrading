@@ -110,6 +110,27 @@ body.overflow-hidden {
     border-radius: 0.5rem;
 }
 
+.home-ranking-tabs-main,
+.home-watchlist-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-width: 0;
+}
+
+.home-ranking-tabs-main {
+    flex: 1;
+    overflow-x: auto;
+}
+
+.home-watchlist-tabs {
+    border-left: 1px solid #263245;
+    flex: 0 0 auto;
+    max-width: 45%;
+    overflow-x: auto;
+    padding-left: 0.55rem;
+}
+
 .home-ranking-tab {
     display: inline-flex;
     align-items: center;
@@ -137,6 +158,15 @@ body.overflow-hidden {
     background-color: #10b981;
     border-color: #34d399;
     color: #052e2b;
+}
+
+.watchlist-manage-tab {
+    gap: 0.4rem;
+    min-width: 7rem;
+}
+
+.watchlist-manage-tab i {
+    color: #f59e0b;
 }
 
 .home-ranking-panel {
@@ -244,6 +274,343 @@ body.overflow-hidden {
 .home-ranking-list.is-card-layout {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+}
+
+.watchlist-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(2, 6, 23, 0.78);
+    padding: 1.25rem;
+}
+
+.watchlist-modal.hidden,
+.watchlist-pane.is-hidden,
+.watchlist-stock-results.is-hidden {
+    display: none;
+}
+
+.watchlist-modal-card {
+    width: min(44rem, 100%);
+    max-height: min(45rem, calc(100vh - 2.5rem));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #334155;
+    border-radius: 0.5rem;
+    background-color: #111827;
+    box-shadow: 0 26px 80px rgba(2, 6, 23, 0.48);
+}
+
+.watchlist-modal-head,
+.watchlist-editor-head,
+.watchlist-editor-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.watchlist-modal-head {
+    justify-content: space-between;
+    min-height: 4rem;
+    padding: 0 1.25rem;
+    border-bottom: 1px solid #334155;
+}
+
+.watchlist-modal-head h2,
+.watchlist-editor-head h3 {
+    color: #f8fafc;
+    font-size: 1.05rem;
+    font-weight: 900;
+}
+
+.watchlist-modal-close,
+.watchlist-editor-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.15rem;
+    height: 2.15rem;
+    border: 0;
+    border-radius: 0.45rem;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.watchlist-modal-close:hover,
+.watchlist-editor-back:hover {
+    background-color: #1e293b;
+    color: #ffffff;
+}
+
+.watchlist-pane {
+    min-height: 0;
+    overflow: auto;
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.watchlist-modal-form,
+.watchlist-editor-tools,
+.watchlist-stock-search {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.watchlist-modal-form input,
+.watchlist-editor-head input,
+.watchlist-stock-search input,
+.watchlist-editor-field select {
+    min-width: 0;
+    height: 2.55rem;
+    border: 1px solid #334155;
+    border-radius: 0.45rem;
+    background-color: #0b1220;
+    color: #f8fafc;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.watchlist-modal-form input,
+.watchlist-stock-search input {
+    flex: 1;
+    padding: 0 0.8rem;
+}
+
+.watchlist-editor-head input {
+    width: min(22rem, 100%);
+    margin-top: 0.45rem;
+    padding: 0 0.8rem;
+}
+
+.watchlist-modal-form input:focus,
+.watchlist-editor-head input:focus,
+.watchlist-stock-search input:focus,
+.watchlist-editor-field select:focus {
+    border-color: #10b981;
+}
+
+.watchlist-modal-add,
+.watchlist-secondary-button,
+.watchlist-danger-button {
+    height: 2.55rem;
+    border: 1px solid transparent;
+    border-radius: 0.45rem;
+    cursor: pointer;
+    font-size: 0.88rem;
+    font-weight: 900;
+    padding: 0 1rem;
+    white-space: nowrap;
+}
+
+.watchlist-modal-add {
+    background-color: #10b981;
+    color: #052e2b;
+}
+
+.watchlist-modal-add:hover {
+    background-color: #34d399;
+}
+
+.watchlist-secondary-button {
+    border-color: #334155;
+    background-color: #1e293b;
+    color: #e2e8f0;
+}
+
+.watchlist-secondary-button:hover {
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.watchlist-danger-button {
+    border-color: #7f1d1d;
+    background-color: #1f1215;
+    color: #fca5a5;
+}
+
+.watchlist-danger-button:hover {
+    background-color: #3f1519;
+}
+
+.watchlist-group-list,
+.watchlist-selected-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    margin-top: 1rem;
+}
+
+.watchlist-empty {
+    padding: 1.5rem 0.75rem;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.watchlist-group-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3rem;
+    border: 1px solid #263245;
+    border-radius: 0.45rem;
+    background-color: #172033;
+    color: #f8fafc;
+    cursor: pointer;
+    padding: 0 0.9rem;
+    text-align: left;
+}
+
+.watchlist-group-row:hover {
+    border-color: #10b981;
+    background-color: #1e293b;
+}
+
+.watchlist-group-row span {
+    font-size: 0.92rem;
+    font-weight: 900;
+}
+
+.watchlist-group-row small,
+.watchlist-selected-row small,
+.watchlist-search-result small {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.watchlist-editor-head {
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.watchlist-editor-tools {
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.watchlist-editor-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    color: #cbd5e1;
+    font-size: 0.86rem;
+    font-weight: 900;
+}
+
+.watchlist-editor-field select {
+    min-width: 11rem;
+    padding: 0 0.7rem;
+}
+
+.watchlist-stock-search {
+    position: relative;
+}
+
+.watchlist-stock-search i {
+    position: absolute;
+    left: 0.75rem;
+    color: #64748b;
+}
+
+.watchlist-stock-search input {
+    padding-left: 2.2rem;
+}
+
+.watchlist-stock-results {
+    max-height: 12rem;
+    overflow: auto;
+    margin-top: 0.45rem;
+    border: 1px solid #334155;
+    border-radius: 0.45rem;
+    background-color: #0b1220;
+}
+
+.watchlist-search-result {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 2.55rem;
+    border: 0;
+    border-bottom: 1px solid #1e293b;
+    background: transparent;
+    color: #f8fafc;
+    cursor: pointer;
+    padding: 0 0.85rem;
+    text-align: left;
+}
+
+.watchlist-search-result:hover {
+    background-color: #172033;
+}
+
+.watchlist-selected-row {
+    display: grid;
+    grid-template-columns: 1.4rem 2rem minmax(0, 1fr) 5rem 2rem;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 2.8rem;
+    border: 1px solid #263245;
+    border-radius: 0.45rem;
+    background-color: #172033;
+    color: #f8fafc;
+    padding: 0 0.65rem;
+}
+
+.watchlist-selected-row.is-dragging {
+    opacity: 0.55;
+}
+
+.watchlist-selected-row > i {
+    color: #64748b;
+    cursor: grab;
+}
+
+.watchlist-selected-rank {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 900;
+}
+
+.watchlist-selected-row strong {
+    min-width: 0;
+    overflow: hidden;
+    color: #f8fafc;
+    font-size: 0.9rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.watchlist-selected-row button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border: 0;
+    border-radius: 0.35rem;
+    background: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.watchlist-selected-row button:hover {
+    background-color: #263245;
+    color: #fca5a5;
+}
+
+.watchlist-editor-actions {
+    justify-content: flex-end;
+    margin-top: 1rem;
 }
 
 .home-ranking-list.is-mover-layout {
