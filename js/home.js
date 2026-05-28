@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let editingItems = [];
     let watchlistSearchTimer = null;
     let draggingWatchlistCode = '';
+    let latestWatchlistSearchResults = [];
+    let activeWatchlistSearchIndex = -1;
 
     const rankingTypeMeta = {
         realtime: { label: '실시간조회', apiId: 'ka00198' },
@@ -608,14 +610,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderWatchlistSearchResults = (results = []) => {
         if (!watchlistStockResults) return;
+        latestWatchlistSearchResults = results;
+        activeWatchlistSearchIndex = results.length ? 0 : -1;
+
         if (!results.length) {
             watchlistStockResults.innerHTML = '<div class="watchlist-empty">검색 결과가 없습니다.</div>';
             watchlistStockResults.classList.remove('is-hidden');
             return;
         }
 
-        watchlistStockResults.innerHTML = results.map((stock) => `
-            <button type="button" class="watchlist-search-result" data-watchlist-search-code="${escapeHtml(stock.code)}" data-watchlist-search-name="${escapeHtml(stock.name)}">
+        watchlistStockResults.innerHTML = results.map((stock, index) => `
+            <button type="button" class="watchlist-search-result${index === activeWatchlistSearchIndex ? ' is-active' : ''}" data-watchlist-search-code="${escapeHtml(stock.code)}" data-watchlist-search-name="${escapeHtml(stock.name)}" data-watchlist-search-index="${index}">
                 <strong>${escapeHtml(stock.name)}</strong>
                 <small>${escapeHtml(stock.code)}</small>
             </button>
@@ -626,6 +631,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const searchWatchlistStocks = async (query) => {
         const keyword = String(query || '').trim();
         if (!keyword) {
+            latestWatchlistSearchResults = [];
+            activeWatchlistSearchIndex = -1;
             watchlistStockResults?.replaceChildren();
             watchlistStockResults?.classList.add('is-hidden');
             return;
@@ -640,6 +647,36 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Watchlist stock search failed.', error);
             renderWatchlistSearchResults([]);
         }
+    };
+
+    const updateActiveWatchlistSearchResult = () => {
+        if (!watchlistStockResults) return;
+        const items = Array.from(watchlistStockResults.querySelectorAll('.watchlist-search-result'));
+        items.forEach((item, index) => {
+            item.classList.toggle('is-active', index === activeWatchlistSearchIndex);
+            if (index === activeWatchlistSearchIndex) item.scrollIntoView({ block: 'nearest' });
+        });
+    };
+
+    const moveActiveWatchlistSearchResult = (direction) => {
+        if (!latestWatchlistSearchResults.length) return;
+        activeWatchlistSearchIndex = (activeWatchlistSearchIndex + direction + latestWatchlistSearchResults.length)
+            % latestWatchlistSearchResults.length;
+        updateActiveWatchlistSearchResult();
+    };
+
+    const addWatchlistSearchResult = (stock) => {
+        if (!stock?.code) return false;
+        const beforeCount = editingItems.length;
+        dedupeAppendEditingItems([{ code: stock.code, name: stock.name }], 'manual');
+        if (editingItems.length === beforeCount) return false;
+
+        if (watchlistStockSearch) watchlistStockSearch.value = '';
+        latestWatchlistSearchResults = [];
+        activeWatchlistSearchIndex = -1;
+        watchlistStockResults?.replaceChildren();
+        watchlistStockResults?.classList.add('is-hidden');
+        return true;
     };
 
     const loadSourceRankingIntoEditor = async () => {
@@ -864,16 +901,37 @@ document.addEventListener('DOMContentLoaded', () => {
         watchlistSearchTimer = setTimeout(() => searchWatchlistStocks(watchlistStockSearch.value), 250);
     });
 
+    watchlistStockSearch?.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            moveActiveWatchlistSearchResult(1);
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            moveActiveWatchlistSearchResult(-1);
+            return;
+        }
+
+        if (event.key !== 'Enter') return;
+        if (!latestWatchlistSearchResults.length) return;
+
+        event.preventDefault();
+        const selected = latestWatchlistSearchResults[
+            activeWatchlistSearchIndex >= 0 ? activeWatchlistSearchIndex : 0
+        ];
+        addWatchlistSearchResult(selected);
+    });
+
     watchlistStockResults?.addEventListener('click', (event) => {
         const result = event.target.closest('[data-watchlist-search-code]');
         if (!result) return;
-        dedupeAppendEditingItems([{
+        activeWatchlistSearchIndex = Number(result.dataset.watchlistSearchIndex || -1);
+        addWatchlistSearchResult({
             code: result.dataset.watchlistSearchCode,
             name: result.dataset.watchlistSearchName,
-        }], 'manual');
-        watchlistStockSearch.value = '';
-        watchlistStockResults.replaceChildren();
-        watchlistStockResults.classList.add('is-hidden');
+        });
     });
 
     watchlistSelectedList?.addEventListener('click', (event) => {

@@ -650,6 +650,11 @@ body.overflow-hidden {
     background-color: #172033;
 }
 
+.watchlist-search-result.is-active {
+    background-color: #1d4ed8;
+    color: #ffffff;
+}
+
 .watchlist-selected-row {
     display: grid;
     grid-template-columns: 1.4rem 2rem minmax(0, 1fr) 5rem 2rem;
