@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { ROOT_DIR } = require('./backend/config');
 const { getChartData } = require('./backend/charts');
+const { getStrategyChartData } = require('./backend/strategyCharts');
 const {
     createIndicatorStrategy,
     deleteIndicatorStrategy,
@@ -106,6 +107,7 @@ const server = http.createServer(async (request, response) => {
     const requestUrl = new URL(request.url, `http://${request.headers.host}`);
     const stockMatch = requestUrl.pathname.match(/^\/api\/stock\/(.+)$/);
     const chartMatch = requestUrl.pathname.match(/^\/api\/chart\/(.+)$/);
+    const strategyChartMatch = requestUrl.pathname.match(/^\/api\/strategy-chart\/(.+)$/);
     const realtimeMatch = requestUrl.pathname.match(/^\/api\/realtime\/(.+)$/);
     const strategyMatch = requestUrl.pathname.match(/^\/api\/indicator-strategies\/([^/]+)$/);
     const watchlistMatch = requestUrl.pathname.match(/^\/api\/watchlists\/([^/]+)$/);
@@ -361,6 +363,24 @@ const server = http.createServer(async (request, response) => {
                 startDate: requestUrl.searchParams.get('startDate'),
                 endDate: requestUrl.searchParams.get('endDate'),
                 settled: requestUrl.searchParams.get('settled') === '1',
+            });
+            sendJson(response, 200, chart);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && strategyChartMatch) {
+        try {
+            const query = decodeURIComponent(strategyChartMatch[1]);
+            const interval = requestUrl.searchParams.get('interval') || '15';
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const chart = await getStrategyChartData(query, interval, credentials, {
+                years: requestUrl.searchParams.get('years'),
+                limit: requestUrl.searchParams.get('limit'),
+                startDate: requestUrl.searchParams.get('startDate'),
+                endDate: requestUrl.searchParams.get('endDate'),
             });
             sendJson(response, 200, chart);
         } catch (error) {

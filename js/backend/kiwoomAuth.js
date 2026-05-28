@@ -68,7 +68,7 @@ function getKiwoomConfig(credentials = null) {
     };
 }
 
-async function requestKiwoomJson(url, headers, body) {
+async function requestKiwoomJsonWithHeaders(url, headers, body) {
     const response = await fetch(url, {
         method: 'POST',
         headers,
@@ -80,7 +80,18 @@ async function requestKiwoomJson(url, headers, body) {
         throw new Error(`Kiwoom API error ${response.status}: ${JSON.stringify(payload)}`);
     }
 
-    return payload;
+    return {
+        headers: {
+            contYn: response.headers.get('cont-yn') || response.headers.get('Cont-Yn') || '',
+            nextKey: response.headers.get('next-key') || response.headers.get('Next-Key') || '',
+        },
+        payload,
+    };
+}
+
+async function requestKiwoomJson(url, headers, body) {
+    const result = await requestKiwoomJsonWithHeaders(url, headers, body);
+    return result.payload;
 }
 
 function parseKiwoomDateTime(value) {
@@ -138,21 +149,30 @@ async function getAccessToken(credentials = null) {
     return tokenCache[cacheKey].token;
 }
 
-async function requestKiwoomTr(apiId, body, endpoint = '/api/dostk/stkinfo', credentials = null) {
+async function requestKiwoomTrWithHeaders(
+    apiId,
+    body,
+    endpoint = '/api/dostk/stkinfo',
+    credentials = null,
+    continuation = {},
+) {
     const { host } = getKiwoomConfig(credentials);
     const token = await getAccessToken(credentials);
+    const contYn = continuation.contYn || 'N';
+    const nextKey = continuation.nextKey || '';
 
-    const payload = await requestKiwoomJson(
+    const result = await requestKiwoomJsonWithHeaders(
         `${host}${endpoint}`,
         {
             'Content-Type': 'application/json;charset=UTF-8',
             authorization: `Bearer ${token}`,
-            'cont-yn': 'N',
-            'next-key': '',
+            'cont-yn': contYn,
+            'next-key': nextKey,
             'api-id': apiId,
         },
         body,
     );
+    const payload = result.payload;
 
     const message = String(payload.return_msg || payload.message || '');
     if (message.includes('Token') || message.includes('토큰')) {
@@ -162,20 +182,25 @@ async function requestKiwoomTr(apiId, body, endpoint = '/api/dostk/stkinfo', cre
         };
         const freshToken = await getAccessToken(credentials);
 
-        return requestKiwoomJson(
+        return requestKiwoomJsonWithHeaders(
             `${host}${endpoint}`,
             {
                 'Content-Type': 'application/json;charset=UTF-8',
                 authorization: `Bearer ${freshToken}`,
-                'cont-yn': 'N',
-                'next-key': '',
+                'cont-yn': contYn,
+                'next-key': nextKey,
                 'api-id': apiId,
             },
             body,
         );
     }
 
-    return payload;
+    return result;
+}
+
+async function requestKiwoomTr(apiId, body, endpoint = '/api/dostk/stkinfo', credentials = null) {
+    const result = await requestKiwoomTrWithHeaders(apiId, body, endpoint, credentials);
+    return result.payload;
 }
 
 module.exports = {
@@ -183,4 +208,5 @@ module.exports = {
     getAccessToken,
     getKiwoomConfig,
     requestKiwoomTr,
+    requestKiwoomTrWithHeaders,
 };
