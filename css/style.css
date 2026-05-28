@@ -342,13 +342,13 @@ body.overflow-hidden {
 }
 
 .watchlist-modal.hidden,
-.watchlist-pane.is-hidden,
-.watchlist-stock-results.is-hidden {
+.watchlist-pane.is-hidden {
     display: none;
 }
 
 .watchlist-modal-card {
     width: min(44rem, 100%);
+    min-height: min(37rem, calc(100vh - 2.5rem));
     max-height: min(45rem, calc(100vh - 2.5rem));
     display: flex;
     flex-direction: column;
@@ -401,6 +401,9 @@ body.overflow-hidden {
 }
 
 .watchlist-pane {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
     min-height: 0;
     overflow: auto;
     padding: 1rem 1.25rem 1.25rem;
@@ -616,12 +619,19 @@ body.overflow-hidden {
 }
 
 .watchlist-stock-results {
+    min-height: 11.5rem;
     max-height: 12rem;
     overflow: auto;
     margin-top: 0.45rem;
     border: 1px solid #334155;
     border-radius: 0.45rem;
     background-color: #0b1220;
+}
+
+.watchlist-stock-results.is-hidden {
+    border-color: transparent;
+    background-color: transparent;
+    pointer-events: none;
 }
 
 .watchlist-search-result {
@@ -713,7 +723,8 @@ body.overflow-hidden {
 
 .watchlist-editor-actions {
     justify-content: flex-end;
-    margin-top: 1rem;
+    margin-top: auto;
+    padding-top: 1rem;
 }
 
 .home-ranking-list.is-mover-layout {
