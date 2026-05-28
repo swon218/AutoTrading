@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { ROOT_DIR } = require('./backend/config');
 const { getChartData } = require('./backend/charts');
+const { getStrategyChartData } = require('./backend/strategyCharts');
 const {
     createIndicatorStrategy,
     deleteIndicatorStrategy,
@@ -22,6 +23,13 @@ const { getHomeRanking } = require('./backend/rankings');
 const { getStockInfo, resolveStockCode, searchStocks } = require('./backend/stocks');
 const { subscribeRealtime } = require('./backend/realtime');
 const { getKiwoomCredentialsForRequest, saveUserApiCredentials } = require('./backend/userCredentials');
+const {
+    createWatchlist,
+    deleteWatchlist,
+    getWatchlistQuotes,
+    getWatchlists,
+    updateWatchlist,
+} = require('./backend/watchlists');
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -99,8 +107,11 @@ const server = http.createServer(async (request, response) => {
     const requestUrl = new URL(request.url, `http://${request.headers.host}`);
     const stockMatch = requestUrl.pathname.match(/^\/api\/stock\/(.+)$/);
     const chartMatch = requestUrl.pathname.match(/^\/api\/chart\/(.+)$/);
+    const strategyChartMatch = requestUrl.pathname.match(/^\/api\/strategy-chart\/(.+)$/);
     const realtimeMatch = requestUrl.pathname.match(/^\/api\/realtime\/(.+)$/);
     const strategyMatch = requestUrl.pathname.match(/^\/api\/indicator-strategies\/([^/]+)$/);
+    const watchlistMatch = requestUrl.pathname.match(/^\/api\/watchlists\/([^/]+)$/);
+    const watchlistQuotesMatch = requestUrl.pathname.match(/^\/api\/watchlists\/([^/]+)\/quotes$/);
 
     if (request.method === 'GET' && requestUrl.pathname === '/api/health') {
         sendJson(response, 200, { ok: true });
@@ -128,6 +139,62 @@ const server = http.createServer(async (request, response) => {
             sendJson(response, 200, ranking);
         } catch (error) {
             sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/watchlists') {
+        try {
+            const result = await getWatchlists(request, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/watchlists') {
+        try {
+            const payload = await parseRequestBody(request);
+            const result = await createWatchlist(request, payload, requestUrl);
+            sendJson(response, 201, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && watchlistQuotesMatch) {
+        try {
+            const groupId = decodeURIComponent(watchlistQuotesMatch[1]);
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const result = await getWatchlistQuotes(request, groupId, requestUrl, credentials);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'PUT' && watchlistMatch) {
+        try {
+            const groupId = decodeURIComponent(watchlistMatch[1]);
+            const payload = await parseRequestBody(request);
+            const result = await updateWatchlist(request, groupId, payload, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'DELETE' && watchlistMatch) {
+        try {
+            const groupId = decodeURIComponent(watchlistMatch[1]);
+            const result = await deleteWatchlist(request, groupId, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, { message: error.message });
         }
         return;
     }
@@ -296,6 +363,24 @@ const server = http.createServer(async (request, response) => {
                 startDate: requestUrl.searchParams.get('startDate'),
                 endDate: requestUrl.searchParams.get('endDate'),
                 settled: requestUrl.searchParams.get('settled') === '1',
+            });
+            sendJson(response, 200, chart);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && strategyChartMatch) {
+        try {
+            const query = decodeURIComponent(strategyChartMatch[1]);
+            const interval = requestUrl.searchParams.get('interval') || '15';
+            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const chart = await getStrategyChartData(query, interval, credentials, {
+                years: requestUrl.searchParams.get('years'),
+                limit: requestUrl.searchParams.get('limit'),
+                startDate: requestUrl.searchParams.get('startDate'),
+                endDate: requestUrl.searchParams.get('endDate'),
             });
             sendJson(response, 200, chart);
         } catch (error) {

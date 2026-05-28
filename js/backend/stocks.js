@@ -135,6 +135,7 @@ async function resolveStockCode(query, credentials = null) {
 }
 
 module.exports = {
+    getStockList,
     getStockInfo,
     resolveStockCode,
     searchStocks,
