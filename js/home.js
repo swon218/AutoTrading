@@ -439,7 +439,12 @@ document.addEventListener('DOMContentLoaded', () => {
         watchlistGroupList.innerHTML = watchlistGroups.map((group) => `
             <button class="watchlist-group-row" type="button" data-edit-watchlist-id="${escapeHtml(group.id)}">
                 <span>${escapeHtml(group.name)}</span>
-                <small>${formatNumber(group.items?.length || 0)}개 종목</small>
+                <span class="watchlist-group-meta">
+                    <small>${formatNumber(group.items?.length || 0)}개 종목</small>
+                    <span class="watchlist-group-delete" role="button" tabindex="0" data-delete-watchlist-id="${escapeHtml(group.id)}" aria-label="${escapeHtml(group.name)} 삭제">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </span>
+                </span>
             </button>
         `).join('');
     };
@@ -805,6 +810,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     watchlistGroupList?.addEventListener('click', (event) => {
+        const deleteButton = event.target.closest('[data-delete-watchlist-id]');
+        if (deleteButton) {
+            event.stopPropagation();
+            const groupId = deleteButton.dataset.deleteWatchlistId;
+            const group = watchlistGroups.find((item) => item.id === groupId);
+            if (!group || !confirm(`${group.name} 관심 그룹을 삭제할까요?`)) return;
+
+            authFetch(`/api/watchlists/${encodeURIComponent(groupId)}`, { method: 'DELETE' })
+                .then(async (response) => {
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+                    if (activeWatchlistId === groupId) loadRanking('realtime');
+                    return loadWatchlists();
+                })
+                .catch((error) => {
+                    console.error('Watchlist delete failed.', error);
+                    alert(error.message || '관심 그룹을 삭제하지 못했습니다.');
+                });
+            return;
+        }
+
         const row = event.target.closest('[data-edit-watchlist-id]');
         if (!row) return;
         const group = watchlistGroups.find((item) => item.id === row.dataset.editWatchlistId);

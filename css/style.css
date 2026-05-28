@@ -536,12 +536,36 @@ body.overflow-hidden {
     font-weight: 900;
 }
 
+.watchlist-group-meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
 .watchlist-group-row small,
 .watchlist-selected-row small,
 .watchlist-search-result small {
     color: #94a3b8;
     font-size: 0.78rem;
     font-weight: 800;
+}
+
+.watchlist-group-delete {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.35rem;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.watchlist-group-delete:hover,
+.watchlist-group-delete:focus-visible {
+    background-color: rgba(220, 38, 38, 0.16);
+    color: #f87171;
+    outline: none;
 }
 
 .watchlist-editor-head {
