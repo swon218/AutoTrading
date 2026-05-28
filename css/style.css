@@ -502,6 +502,11 @@ body.overflow-hidden {
     margin-top: 1rem;
 }
 
+.watchlist-selected-list {
+    min-height: 0;
+    overflow-y: auto;
+}
+
 .watchlist-selected-list.is-reordering {
     cursor: grabbing;
 }
@@ -619,6 +624,7 @@ body.overflow-hidden {
 }
 
 .watchlist-stock-results {
+    flex: 0 0 auto;
     max-height: 12rem;
     overflow: auto;
     margin-top: 0.45rem;
