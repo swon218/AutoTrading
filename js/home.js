@@ -705,8 +705,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderWatchlistSearchResults = (results = []) => {
         if (!watchlistStockResults) return;
+        const previousResults = latestWatchlistSearchResults;
+        const previousActiveIndex = activeWatchlistSearchIndex;
+        const isSameResultSet = previousResults.length === results.length
+            && previousResults.every((stock, index) => stock.code === results[index]?.code);
+
         latestWatchlistSearchResults = results;
-        activeWatchlistSearchIndex = results.length ? 0 : -1;
+        activeWatchlistSearchIndex = results.length
+            ? (isSameResultSet && previousActiveIndex >= 0 ? Math.min(previousActiveIndex, results.length - 1) : 0)
+            : -1;
 
         if (!results.length) {
             watchlistStockResults.innerHTML = '<div class="watchlist-empty">검색 결과가 없습니다.</div>';
@@ -753,8 +760,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    const hydrateWatchlistSearchResultsFromDom = () => {
+        if (!watchlistStockResults) return false;
+        const items = Array.from(watchlistStockResults.querySelectorAll('.watchlist-search-result'));
+        if (!items.length) return false;
+
+        latestWatchlistSearchResults = items.map((item) => ({
+            code: item.dataset.watchlistSearchCode || '',
+            name: item.dataset.watchlistSearchName || item.querySelector('strong')?.textContent?.trim() || '',
+        })).filter((stock) => stock.code);
+
+        if (!latestWatchlistSearchResults.length) return false;
+
+        const activeItemIndex = items.findIndex((item) => item.classList.contains('is-active'));
+        activeWatchlistSearchIndex = activeItemIndex >= 0 ? activeItemIndex : 0;
+        return true;
+    };
+
     const moveActiveWatchlistSearchResult = (direction) => {
-        if (!latestWatchlistSearchResults.length) return;
+        if (!latestWatchlistSearchResults.length && !hydrateWatchlistSearchResultsFromDom()) return;
         activeWatchlistSearchIndex = (activeWatchlistSearchIndex + direction + latestWatchlistSearchResults.length)
             % latestWatchlistSearchResults.length;
         updateActiveWatchlistSearchResult();
@@ -999,18 +1023,21 @@ document.addEventListener('DOMContentLoaded', () => {
     watchlistStockSearch?.addEventListener('keydown', (event) => {
         if (event.key === 'ArrowDown') {
             event.preventDefault();
+            clearTimeout(watchlistSearchTimer);
             moveActiveWatchlistSearchResult(1);
             return;
         }
 
         if (event.key === 'ArrowUp') {
             event.preventDefault();
+            clearTimeout(watchlistSearchTimer);
             moveActiveWatchlistSearchResult(-1);
             return;
         }
 
         if (event.key !== 'Enter') return;
-        if (!latestWatchlistSearchResults.length) return;
+        clearTimeout(watchlistSearchTimer);
+        if (!latestWatchlistSearchResults.length && !hydrateWatchlistSearchResultsFromDom()) return;
 
         event.preventDefault();
         const selected = latestWatchlistSearchResults[
