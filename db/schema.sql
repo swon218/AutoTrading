@@ -223,3 +223,20 @@ CREATE POLICY watchlist_items_owner_delete
     FOR DELETE
     USING (auth.uid() = user_id);
 
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON public.watchlist_groups
+TO authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON public.watchlist_items
+TO authenticated;
+
+GRANT ALL
+ON public.watchlist_groups
+TO service_role;
+
+GRANT ALL
+ON public.watchlist_items
+TO service_role;
