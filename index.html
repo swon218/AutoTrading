@@ -154,7 +154,6 @@
                         <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                     </button>
                     <div>
-                        <h3 id="watchlistEditTitle">관심 그룹</h3>
                         <input id="watchlistEditName" type="text" placeholder="그룹 이름" autocomplete="off">
                     </div>
                 </div>
@@ -165,7 +164,8 @@
                         <select id="watchlistSourceType">
                             <option value="manual">직접 추가</option>
                             <option value="realtime">실시간조회</option>
-                            <option value="movers">상승률/하락률</option>
+                            <option value="gainers">상승률</option>
+                            <option value="losers">하락률</option>
                             <option value="volume">거래량 상위</option>
                             <option value="volumeSpike">거래량 급증</option>
                             <option value="domesticTradeTop">개인/기관 매매상위</option>
@@ -173,7 +173,6 @@
                             <option value="sector">섹터상위</option>
                         </select>
                     </label>
-                    <button id="watchlistSourceLoad" type="button" class="watchlist-secondary-button">종목모음 추가</button>
                 </div>
 
                 <div class="watchlist-stock-search">

@@ -320,8 +320,7 @@ body.overflow-hidden {
     border-bottom: 1px solid #334155;
 }
 
-.watchlist-modal-head h2,
-.watchlist-editor-head h3 {
+.watchlist-modal-head h2 {
     color: #f8fafc;
     font-size: 1.05rem;
     font-weight: 900;
@@ -383,7 +382,6 @@ body.overflow-hidden {
 
 .watchlist-editor-head input {
     width: min(22rem, 100%);
-    margin-top: 0.45rem;
     padding: 0 0.8rem;
 }
 
@@ -428,13 +426,15 @@ body.overflow-hidden {
 }
 
 .watchlist-danger-button {
-    border-color: #7f1d1d;
-    background-color: #1f1215;
-    color: #fca5a5;
+    border-color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.12);
+    color: #fecaca;
 }
 
 .watchlist-danger-button:hover {
-    background-color: #3f1519;
+    border-color: #f87171;
+    background-color: rgba(239, 68, 68, 0.22);
+    color: #ffffff;
 }
 
 .watchlist-group-list,
@@ -487,7 +487,7 @@ body.overflow-hidden {
 }
 
 .watchlist-editor-head {
-    align-items: flex-start;
+    align-items: center;
     margin-bottom: 1rem;
 }
 

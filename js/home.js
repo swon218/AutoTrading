@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const watchlistGroupAddBtn = document.getElementById('watchlistGroupAddBtn');
     const watchlistGroupList = document.getElementById('watchlistGroupList');
     const watchlistEditBack = document.getElementById('watchlistEditBack');
-    const watchlistEditTitle = document.getElementById('watchlistEditTitle');
     const watchlistEditName = document.getElementById('watchlistEditName');
     const watchlistSourceType = document.getElementById('watchlistSourceType');
     const watchlistSourceLoad = document.getElementById('watchlistSourceLoad');
@@ -50,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const rankingTypeMeta = {
         realtime: { label: '실시간조회', apiId: 'ka00198' },
         movers: { label: '상승률/하락률', apiId: 'ka10027' },
+        gainers: { label: '상승률', apiId: 'ka10027' },
+        losers: { label: '하락률', apiId: 'ka10027' },
         volume: { label: '거래량 상위', apiId: 'ka10030' },
         volumeSpike: { label: '거래량 급증', apiId: 'ka10023' },
         domesticTradeTop: { label: '개인/기관 매매상위', apiId: 'ka10065' },
@@ -432,8 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const showWatchlistEditPane = (group) => {
         editingGroup = group;
         editingItems = [...(group.items || [])].map((item) => ({ ...item }));
-        if (watchlistEditTitle) watchlistEditTitle.textContent = group.name;
         if (watchlistEditName) watchlistEditName.value = group.name;
+        if (watchlistSourceType) watchlistSourceType.value = 'manual';
         if (watchlistStockSearch) watchlistStockSearch.value = '';
         watchlistStockResults?.classList.add('is-hidden');
         watchlistStockResults?.replaceChildren();
@@ -727,6 +728,15 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSourceRankingIntoEditor().catch((error) => {
             console.error('Watchlist source load failed.', error);
             alert(error.message || '종목모음을 불러오지 못했습니다.');
+        });
+    });
+
+    watchlistSourceType?.addEventListener('change', () => {
+        if (watchlistSourceType.value === 'manual') return;
+        loadSourceRankingIntoEditor().catch((error) => {
+            console.error('Watchlist source load failed.', error);
+            alert(error.message || '종목모음을 불러오지 못했습니다.');
+            watchlistSourceType.value = 'manual';
         });
     });
 
