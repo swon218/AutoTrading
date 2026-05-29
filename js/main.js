@@ -139,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const autoTradeMinPriceInput = document.getElementById('autoTradeMinPriceInput');
     const autoTradeQuantityInput = document.getElementById('autoTradeQuantityInput');
     const autoTradePriceRangeCheckbox = document.getElementById('autoTradePriceRangeCheckbox');
-    const autoTradeCashGuardCheckbox = document.getElementById('autoTradeCashGuardCheckbox');
     const autoTradeSignalGuardCheckbox = document.getElementById('autoTradeSignalGuardCheckbox');
     const autoTradeTelegramStatus = document.getElementById('autoTradeTelegramStatus');
     const autoTradeTelegramStatusText = document.getElementById('autoTradeTelegramStatusText');
@@ -502,7 +501,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateAutoTradeSubmitState = () => {
         if (!autoTradeSubmitButton) return;
         autoTradeSubmitButton.disabled = !autoTradePriceRangeCheckbox?.checked
-            || !autoTradeCashGuardCheckbox?.checked
             || !autoTradeSignalGuardCheckbox?.checked;
     };
 
@@ -998,7 +996,6 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         submitAutoTradeRule();
     });
-    autoTradeCashGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
     autoTradePriceRangeCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
     autoTradeSignalGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
 
@@ -1237,7 +1234,7 @@ document.addEventListener('DOMContentLoaded', () => {
             minBuyPrice: parseOrderNumber(autoTradeMinPriceInput?.value),
             orderQuantity: parseOrderNumber(autoTradeQuantityInput?.value),
             priceRangeAgreed: Boolean(autoTradePriceRangeCheckbox?.checked),
-            cashGuardAgreed: Boolean(autoTradeCashGuardCheckbox?.checked),
+            cashGuardAgreed: true,
             signalGuardAgreed: Boolean(autoTradeSignalGuardCheckbox?.checked),
             telegramAlertEnabled: true,
             autoOrderEnabled: true,
