@@ -22,6 +22,7 @@ function parseArgs(argv) {
         maxPagesPerStock: 0,
         startFrom: '',
     };
+    const positional = [];
 
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index];
@@ -53,7 +54,19 @@ function parseArgs(argv) {
             index += 1;
         } else if (arg === '--help' || arg === '-h') {
             options.help = true;
+        } else if (!arg.startsWith('-')) {
+            positional.push(arg);
         }
+    }
+
+    if (!options.codes.length && positional[0]) {
+        options.codes = String(positional[0])
+            .split(',')
+            .map((code) => code.trim().replace(/^A/i, ''))
+            .filter(Boolean);
+    }
+    if (!options.maxPagesPerStock && positional[1]) {
+        options.maxPagesPerStock = Number(positional[1] || 0);
     }
 
     return options;
