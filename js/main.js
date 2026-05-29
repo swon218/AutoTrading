@@ -495,6 +495,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const updateAutoTradeSubmitState = () => {
+        if (!autoTradeSubmitButton) return;
+        autoTradeSubmitButton.disabled = !autoTradeCashGuardCheckbox?.checked;
+    };
+
     const renderPendingOrders = (orders = []) => {
         if (!pendingOrdersList) return;
         if (!orders.length) {
@@ -987,6 +992,7 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         submitAutoTradeRule();
     });
+    autoTradeCashGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
 
     const getIndicatorFieldValue = (indicator, field) => {
         const values = normalizeIndicatorValues(indicator.key, indicator.values);
@@ -1175,7 +1181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isTelegramConfigured = Boolean(payload.telegramConfigured);
             autoTradeTelegramStatus.textContent = isTelegramConfigured
                 ? '텔레그램 연동 완료'
-                : '텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다.';
+                : '텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다. 회원정보수정에서 입력하세요.';
             autoTradeTelegramStatus.classList.toggle('is-error', !isTelegramConfigured);
         } catch (error) {
             console.error('Integration status request failed.', error);
@@ -1193,6 +1199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         renderAutoTradeStrategyOptions();
         fetchAutoTradeCash();
         fetchIntegrationStatus();
+        updateAutoTradeSubmitState();
     };
 
     const submitAutoTradeRule = async () => {

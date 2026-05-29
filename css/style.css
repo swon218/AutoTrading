@@ -1136,6 +1136,7 @@ body.overflow-hidden {
 .order-top-tabs {
     display: flex;
     align-items: center;
+    gap: 0.45rem;
     border-bottom: 1px solid #334155;
     padding-bottom: 0.55rem;
 }
@@ -1159,7 +1160,7 @@ body.overflow-hidden {
 .order-form {
     display: flex;
     flex-direction: column;
-    gap: 0.72rem;
+    gap: 0.66rem;
 }
 
 .order-side-tabs,
@@ -1214,9 +1215,9 @@ body.overflow-hidden {
 .auto-trade-check {
     display: flex;
     align-items: flex-start;
-    gap: 0.55rem;
+    gap: 0.45rem;
     color: #cbd5e1;
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     line-height: 1.35;
 }
 
@@ -1226,18 +1227,13 @@ body.overflow-hidden {
 }
 
 .auto-trade-status {
-    border: 1px solid #334155;
-    border-radius: 0.45rem;
-    background-color: rgba(15, 23, 42, 0.62);
     color: #a7f3d0;
-    font-size: 0.76rem;
+    font-size: 0.72rem;
     line-height: 1.4;
-    padding: 0.65rem 0.75rem;
 }
 
 .auto-trade-status.is-error {
     color: #fecaca;
-    border-color: rgba(239, 68, 68, 0.45);
 }
 
 .order-field,
@@ -1257,6 +1253,7 @@ body.overflow-hidden {
 }
 
 .order-field-select select,
+.order-field select,
 .order-stepper input,
 .order-total-wrap input,
 .order-holding-summary input,
@@ -1308,6 +1305,7 @@ body.overflow-hidden {
 }
 
 .order-field-select select:focus,
+.order-field select:focus,
 .order-stepper input:focus {
     border-color: #10b981;
 }
