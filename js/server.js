@@ -33,6 +33,12 @@ const {
 
 const PORT = Number(process.env.PORT || 3000);
 
+function getRequestUrl(request) {
+    const host = request.headers.host || `localhost:${PORT}`;
+    const protocol = request.headers['x-forwarded-proto'] || 'http';
+    return new URL(request.url || '/', `${protocol}://${host}`);
+}
+
 function parseRequestBody(request) {
     return new Promise((resolve, reject) => {
         let body = '';
@@ -71,7 +77,7 @@ function sendJson(response, statusCode, payload) {
 }
 
 function sendStatic(request, response) {
-    const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+    const requestUrl = getRequestUrl(request);
     const pathname = decodeURIComponent(requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname);
     const filePath = path.normalize(path.join(ROOT_DIR, pathname));
 
@@ -104,7 +110,7 @@ function sendStatic(request, response) {
 }
 
 const server = http.createServer(async (request, response) => {
-    const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+    const requestUrl = getRequestUrl(request);
     const stockMatch = requestUrl.pathname.match(/^\/api\/stock\/(.+)$/);
     const chartMatch = requestUrl.pathname.match(/^\/api\/chart\/(.+)$/);
     const strategyChartMatch = requestUrl.pathname.match(/^\/api\/strategy-chart\/(.+)$/);
