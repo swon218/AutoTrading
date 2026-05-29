@@ -1227,6 +1227,9 @@ body.overflow-hidden {
 }
 
 .auto-trade-status {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.38rem;
     color: #cbd5e1;
     font-size: 0.72rem;
     line-height: 1.4;
@@ -1234,6 +1237,21 @@ body.overflow-hidden {
 
 .auto-trade-status.is-error {
     color: #cbd5e1;
+}
+
+.auto-trade-status-dot {
+    flex: 0 0 auto;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-top: 0.23rem;
+    border-radius: 9999px;
+    background-color: #34d399;
+    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.16);
+}
+
+.auto-trade-status.is-error .auto-trade-status-dot {
+    background-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
 .order-field,

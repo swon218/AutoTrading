@@ -139,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const autoTradeQuantityInput = document.getElementById('autoTradeQuantityInput');
     const autoTradeCashGuardCheckbox = document.getElementById('autoTradeCashGuardCheckbox');
     const autoTradeTelegramStatus = document.getElementById('autoTradeTelegramStatus');
+    const autoTradeTelegramStatusText = document.getElementById('autoTradeTelegramStatusText');
     const autoTradeSubmitButton = document.getElementById('autoTradeSubmitButton');
     const autoTradeMessage = document.getElementById('autoTradeMessage');
 
@@ -1173,20 +1174,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const fetchIntegrationStatus = async () => {
         if (!autoTradeTelegramStatus) return;
-        autoTradeTelegramStatus.textContent = '텔레그램 연동 상태를 확인 중입니다.';
+        const setTelegramStatusText = (message) => {
+            if (autoTradeTelegramStatusText) {
+                autoTradeTelegramStatusText.textContent = message;
+            } else {
+                autoTradeTelegramStatus.textContent = message;
+            }
+        };
+
+        setTelegramStatusText('텔레그램 연동 상태를 확인 중입니다.');
         try {
             const response = await authFetch('/api/integration-status', { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
             isTelegramConfigured = Boolean(payload.telegramConfigured);
-            autoTradeTelegramStatus.textContent = isTelegramConfigured
+            setTelegramStatusText(isTelegramConfigured
                 ? '텔레그램 연동 완료'
-                : '텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다. 회원정보수정에서 입력하세요.';
+                : '텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다. 회원정보수정에서 입력하세요.');
             autoTradeTelegramStatus.classList.toggle('is-error', !isTelegramConfigured);
         } catch (error) {
             console.error('Integration status request failed.', error);
             isTelegramConfigured = false;
-            autoTradeTelegramStatus.textContent = '연동 상태를 확인하지 못했습니다.';
+            setTelegramStatusText('연동 상태를 확인하지 못했습니다.');
             autoTradeTelegramStatus.classList.add('is-error');
         }
     };
