@@ -32,6 +32,10 @@ const {
     saveAutoTradeRule,
     updateAutoTradeRuleEnabled,
 } = require('./backend/autoTradeRules');
+const {
+    getAutoTradeEngineStatus,
+    startAutoTradeEngine,
+} = require('./backend/autoTradeEngine');
 const { testTelegramConnection } = require('./backend/telegram');
 const {
     createWatchlist,
@@ -255,6 +259,11 @@ const server = http.createServer(async (request, response) => {
         } catch (error) {
             sendJson(response, error.statusCode || 500, { message: error.message });
         }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/auto-trade-engine/status') {
+        sendJson(response, 200, getAutoTradeEngineStatus());
         return;
     }
 
@@ -492,6 +501,7 @@ const server = http.createServer(async (request, response) => {
 if (require.main === module) {
     server.listen(PORT, () => {
         console.log(`AutoTrading server: http://localhost:${PORT}`);
+        startAutoTradeEngine();
     });
 }
 

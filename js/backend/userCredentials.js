@@ -200,6 +200,26 @@ async function getKiwoomCredentialsForRequest(request, requestUrl = null) {
     };
 }
 
+async function getUserKiwoomCredentialsById(userId) {
+    const config = getBackendSupabaseConfig();
+    const row = await getUserApiCredentialRow(userId, config);
+
+    if (!row?.kiwoom_app_key_encrypted || !row?.kiwoom_secret_key_encrypted) {
+        return null;
+    }
+
+    return {
+        appkey: decryptSecret(row.kiwoom_app_key_encrypted, config.encryptionKey),
+        secretkey: decryptSecret(row.kiwoom_secret_key_encrypted, config.encryptionKey),
+        telegramBotToken: row.telegram_bot_token_encrypted
+            ? decryptSecret(row.telegram_bot_token_encrypted, config.encryptionKey)
+            : '',
+        telegramChatId: row.telegram_chat_id_encrypted
+            ? decryptSecret(row.telegram_chat_id_encrypted, config.encryptionKey)
+            : '',
+    };
+}
+
 async function getUserIntegrationStatus(request, requestUrl = null) {
     const config = getBackendSupabaseConfig();
     const accessToken = getAuthorizationToken(request, requestUrl);
@@ -217,6 +237,7 @@ module.exports = {
     getBackendSupabaseConfig,
     getUserIntegrationStatus,
     getKiwoomCredentialsForRequest,
+    getUserKiwoomCredentialsById,
     requestSupabaseJson,
     saveUserApiCredentials,
 };

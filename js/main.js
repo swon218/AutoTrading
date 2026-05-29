@@ -1221,7 +1221,7 @@ document.addEventListener('DOMContentLoaded', () => {
             orderQuantity: parseOrderNumber(autoTradeQuantityInput?.value),
             cashGuardAgreed: Boolean(autoTradeCashGuardCheckbox?.checked),
             telegramAlertEnabled: true,
-            autoOrderEnabled: false,
+            autoOrderEnabled: true,
             isEnabled: true,
         };
 
@@ -1235,7 +1235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             const result = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(result.message || `HTTP ${response.status}`);
-            setAutoTradeMessage('자동매매 설정을 저장했습니다. 현재 버전은 알림/설정 저장 단계입니다.', 'success');
+            setAutoTradeMessage('자동매매 설정을 저장했습니다. 서버가 켜져 있는 동안 조건을 감시합니다.', 'success');
         } catch (error) {
             setAutoTradeMessage(error.message || '자동매매 설정 저장에 실패했습니다.', 'error');
         } finally {
