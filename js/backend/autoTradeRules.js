@@ -51,6 +51,7 @@ function validateRulePayload(payload) {
     const orderAmount = numberOrNull(payload.orderAmount);
     const priceRangeAgreed = Boolean(payload.priceRangeAgreed);
     const cashGuardAgreed = Boolean(payload.cashGuardAgreed);
+    const signalGuardAgreed = Boolean(payload.signalGuardAgreed);
 
     if (!/^[A-Za-z0-9_]+$/.test(stockCode)) {
         const error = new Error('자동매매할 종목을 먼저 선택하세요.');
@@ -74,6 +75,11 @@ function validateRulePayload(payload) {
     }
     if (!cashGuardAgreed) {
         const error = new Error('주문가능금액 초과 시 자동매매하지 않는 조건에 동의해야 합니다.');
+        error.statusCode = 400;
+        throw error;
+    }
+    if (!signalGuardAgreed) {
+        const error = new Error('주문가능금액/가격범위/전략도달 조건에 동의해야 합니다.');
         error.statusCode = 400;
         throw error;
     }

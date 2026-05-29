@@ -140,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const autoTradeQuantityInput = document.getElementById('autoTradeQuantityInput');
     const autoTradePriceRangeCheckbox = document.getElementById('autoTradePriceRangeCheckbox');
     const autoTradeCashGuardCheckbox = document.getElementById('autoTradeCashGuardCheckbox');
+    const autoTradeSignalGuardCheckbox = document.getElementById('autoTradeSignalGuardCheckbox');
     const autoTradeTelegramStatus = document.getElementById('autoTradeTelegramStatus');
     const autoTradeTelegramStatusText = document.getElementById('autoTradeTelegramStatusText');
     const autoTradeSubmitButton = document.getElementById('autoTradeSubmitButton');
@@ -501,7 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateAutoTradeSubmitState = () => {
         if (!autoTradeSubmitButton) return;
         autoTradeSubmitButton.disabled = !autoTradePriceRangeCheckbox?.checked
-            || !autoTradeCashGuardCheckbox?.checked;
+            || !autoTradeCashGuardCheckbox?.checked
+            || !autoTradeSignalGuardCheckbox?.checked;
     };
 
     const renderPendingOrders = (orders = []) => {
@@ -998,6 +1000,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     autoTradeCashGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
     autoTradePriceRangeCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
+    autoTradeSignalGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
 
     const getIndicatorFieldValue = (indicator, field) => {
         const values = normalizeIndicatorValues(indicator.key, indicator.values);
@@ -1235,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', () => {
             orderQuantity: parseOrderNumber(autoTradeQuantityInput?.value),
             priceRangeAgreed: Boolean(autoTradePriceRangeCheckbox?.checked),
             cashGuardAgreed: Boolean(autoTradeCashGuardCheckbox?.checked),
+            signalGuardAgreed: Boolean(autoTradeSignalGuardCheckbox?.checked),
             telegramAlertEnabled: true,
             autoOrderEnabled: true,
             isEnabled: true,
