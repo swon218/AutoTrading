@@ -236,10 +236,11 @@
 
                 <div id="orderPanel" class="order-panel-body hidden" role="tabpanel" aria-labelledby="orderPanelTab">
                     <div class="order-top-tabs" aria-label="주문 방식">
-                        <button type="button" class="order-top-tab is-active">일반주문</button>
+                        <button type="button" class="order-top-tab is-active" data-order-mode="manual">일반주문</button>
+                        <button type="button" class="order-top-tab" data-order-mode="auto">자동매매</button>
                     </div>
 
-                    <form id="orderForm" class="order-form">
+                    <form id="orderForm" class="order-form" data-order-mode-panel="manual">
                         <div class="order-side-tabs" aria-label="매매 구분">
                             <button type="button" class="order-side-tab is-active" data-order-action="buy">매수</button>
                             <button type="button" class="order-side-tab" data-order-action="sell">매도</button>
@@ -315,6 +316,46 @@
                         </div>
                         <p id="orderMessage" class="order-message" aria-live="polite"></p>
                     </form>
+
+                    <form id="autoTradeForm" class="order-form hidden" data-order-mode-panel="auto">
+                        <label class="order-field">
+                            <span>저장 전략</span>
+                            <select id="autoTradeStrategySelect">
+                                <option value="">전략 선택</option>
+                            </select>
+                        </label>
+
+                        <label class="order-field">
+                            <span>주문가능금액</span>
+                            <div class="order-total-wrap">
+                                <input id="autoTradeCashInput" type="text" placeholder="조회 중..." readonly>
+                            </div>
+                        </label>
+
+                        <label class="order-field">
+                            <span>매수 상한가</span>
+                            <div class="order-total-wrap">
+                                <input id="autoTradeMaxPriceInput" type="text" inputmode="numeric" autocomplete="off" placeholder="상한가 입력">
+                            </div>
+                        </label>
+
+                        <div class="order-control-row">
+                            <label for="autoTradeQuantityInput">주문 수량</label>
+                            <div class="order-stepper">
+                                <input id="autoTradeQuantityInput" type="text" inputmode="numeric" autocomplete="off" placeholder="수량 입력">
+                                <span class="order-unit">주</span>
+                            </div>
+                        </div>
+
+                        <label class="auto-trade-check">
+                            <input id="autoTradeCashGuardCheckbox" type="checkbox">
+                            <span>주문 금액이 계좌 주문가능금액보다 크면 자동매매하지 않습니다.</span>
+                        </label>
+
+                        <div id="autoTradeTelegramStatus" class="auto-trade-status">텔레그램 연동 상태를 확인 중입니다.</div>
+                        <button id="autoTradeSubmitButton" type="submit" class="order-submit-button">자동매매 설정 저장</button>
+                        <p id="autoTradeMessage" class="order-message" aria-live="polite"></p>
+                    </form>
                 </div>
             </div>
 
@@ -322,7 +363,7 @@
 
     </div>
 
-    <script type="module" src="js/authModal.js"></script>
-    <script type="module" src="js/main.js?v=indicator-keys-20260530-2"></script>
+    <script type="module" src="js/authModal.js?v=auto-trade-20260530"></script>
+    <script type="module" src="js/main.js?v=auto-trade-20260530"></script>
 </body>
 </html>

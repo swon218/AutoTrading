@@ -130,6 +130,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingOrdersList = document.getElementById('pendingOrdersList');
     const orderMessage = document.getElementById('orderMessage');
     const orderSubmitButton = document.getElementById('orderSubmitButton');
+    const orderModeButtons = document.querySelectorAll('[data-order-mode]');
+    const orderModePanels = document.querySelectorAll('[data-order-mode-panel]');
+    const autoTradeForm = document.getElementById('autoTradeForm');
+    const autoTradeStrategySelect = document.getElementById('autoTradeStrategySelect');
+    const autoTradeCashInput = document.getElementById('autoTradeCashInput');
+    const autoTradeMaxPriceInput = document.getElementById('autoTradeMaxPriceInput');
+    const autoTradeQuantityInput = document.getElementById('autoTradeQuantityInput');
+    const autoTradeCashGuardCheckbox = document.getElementById('autoTradeCashGuardCheckbox');
+    const autoTradeTelegramStatus = document.getElementById('autoTradeTelegramStatus');
+    const autoTradeSubmitButton = document.getElementById('autoTradeSubmitButton');
+    const autoTradeMessage = document.getElementById('autoTradeMessage');
 
     let currentStockCode = '';
     let refreshTimer = null;
@@ -169,9 +180,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeIndicators = [];
     let savedIndicatorStrategies = [];
     let currentOrderAction = 'buy';
+    let currentOrderMode = 'manual';
     let currentOrderPriceMode = 'limit';
     let latestStockPrice = 0;
     let orderMessageTimer = null;
+    let autoTradeMessageTimer = null;
+    let isTelegramConfigured = false;
     let hasUserEditedOrderPrice = false;
     let orderableCashTimer = null;
     let pendingOrdersTimer = null;
@@ -449,6 +463,35 @@ document.addEventListener('DOMContentLoaded', () => {
             orderMessageTimer = setTimeout(() => {
                 setOrderMessage('');
             }, options.autoHide);
+        }
+    };
+
+    const setAutoTradeMessage = (message = '', type = '', options = {}) => {
+        if (!autoTradeMessage) return;
+        if (autoTradeMessageTimer) {
+            clearTimeout(autoTradeMessageTimer);
+            autoTradeMessageTimer = null;
+        }
+        autoTradeMessage.textContent = message;
+        autoTradeMessage.classList.toggle('is-error', type === 'error');
+        autoTradeMessage.classList.toggle('is-success', type === 'success');
+        if (message && options.autoHide) {
+            autoTradeMessageTimer = setTimeout(() => {
+                setAutoTradeMessage('');
+            }, options.autoHide);
+        }
+    };
+
+    const setOrderMode = (mode = 'manual') => {
+        currentOrderMode = mode === 'auto' ? 'auto' : 'manual';
+        orderModeButtons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.orderMode === currentOrderMode);
+        });
+        orderModePanels.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.dataset.orderModePanel !== currentOrderMode);
+        });
+        if (currentOrderMode === 'auto') {
+            loadAutoTradePanel();
         }
     };
 
@@ -934,6 +977,17 @@ document.addEventListener('DOMContentLoaded', () => {
         submitStockOrder();
     });
 
+    orderModeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setOrderMode(button.dataset.orderMode);
+        });
+    });
+
+    autoTradeForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        submitAutoTradeRule();
+    });
+
     const getIndicatorFieldValue = (indicator, field) => {
         const values = normalizeIndicatorValues(indicator.key, indicator.values);
         return values[field.key] ?? field.value;
@@ -1084,6 +1138,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 option.scrollIntoView({ block: 'nearest' });
             }
         });
+    };
+
+    const renderAutoTradeStrategyOptions = () => {
+        if (!autoTradeStrategySelect) return;
+        autoTradeStrategySelect.innerHTML = '<option value="">전략 선택</option>';
+        savedIndicatorStrategies.forEach((strategy) => {
+            const option = document.createElement('option');
+            option.value = strategy.id;
+            option.textContent = strategy.name;
+            autoTradeStrategySelect.appendChild(option);
+        });
+    };
+
+    const fetchAutoTradeCash = async () => {
+        if (!autoTradeCashInput) return;
+        autoTradeCashInput.value = '조회 중...';
+        try {
+            const response = await authFetch('/api/account/orderable-cash', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            autoTradeCashInput.value = `${formatNumber(Number(payload.orderableAmount) || 0)}원`;
+        } catch (error) {
+            console.error('Auto trade cash request failed.', error);
+            autoTradeCashInput.value = '계좌 조회 실패';
+        }
+    };
+
+    const fetchIntegrationStatus = async () => {
+        if (!autoTradeTelegramStatus) return;
+        autoTradeTelegramStatus.textContent = '텔레그램 연동 상태를 확인 중입니다.';
+        try {
+            const response = await authFetch('/api/integration-status', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            isTelegramConfigured = Boolean(payload.telegramConfigured);
+            autoTradeTelegramStatus.textContent = isTelegramConfigured
+                ? '텔레그램 연동 완료'
+                : '텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다.';
+            autoTradeTelegramStatus.classList.toggle('is-error', !isTelegramConfigured);
+        } catch (error) {
+            console.error('Integration status request failed.', error);
+            isTelegramConfigured = false;
+            autoTradeTelegramStatus.textContent = '연동 상태를 확인하지 못했습니다.';
+            autoTradeTelegramStatus.classList.add('is-error');
+        }
+    };
+
+    const loadAutoTradePanel = async () => {
+        if (!savedIndicatorStrategies.length) {
+            savedIndicatorStrategies = await loadSavedIndicatorStrategies();
+            renderSavedStrategyOptions();
+        }
+        renderAutoTradeStrategyOptions();
+        fetchAutoTradeCash();
+        fetchIntegrationStatus();
+    };
+
+    const submitAutoTradeRule = async () => {
+        if (!currentStockCode) {
+            setAutoTradeMessage('먼저 종목을 검색해서 선택하세요.', 'error');
+            return;
+        }
+        if (!isTelegramConfigured) {
+            setAutoTradeMessage('텔레그램 봇 토큰과 Chat ID를 먼저 저장하세요.', 'error');
+            return;
+        }
+
+        const strategyId = autoTradeStrategySelect?.value || '';
+        const payload = {
+            stockCode: currentStockCode,
+            stockName: stockEls.name?.textContent || '',
+            strategyId,
+            maxBuyPrice: parseOrderNumber(autoTradeMaxPriceInput?.value),
+            orderQuantity: parseOrderNumber(autoTradeQuantityInput?.value),
+            cashGuardAgreed: Boolean(autoTradeCashGuardCheckbox?.checked),
+            telegramAlertEnabled: true,
+            autoOrderEnabled: false,
+            isEnabled: true,
+        };
+
+        autoTradeSubmitButton.disabled = true;
+        setAutoTradeMessage('자동매매 설정을 저장하는 중입니다...');
+        try {
+            const response = await authFetch('/api/auto-trade-rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `HTTP ${response.status}`);
+            setAutoTradeMessage('자동매매 설정을 저장했습니다. 현재 버전은 알림/설정 저장 단계입니다.', 'success');
+        } catch (error) {
+            setAutoTradeMessage(error.message || '자동매매 설정 저장에 실패했습니다.', 'error');
+        } finally {
+            autoTradeSubmitButton.disabled = false;
+        }
     };
 
     const moveActiveIndicatorSearchOption = (direction) => {

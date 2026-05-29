@@ -142,6 +142,9 @@ async function saveUserApiCredentials(request, payload) {
         telegram_bot_token_encrypted: payload.telegramBotToken?.trim()
             ? encryptSecret(payload.telegramBotToken.trim(), config.encryptionKey)
             : null,
+        telegram_chat_id_encrypted: payload.telegramChatId?.trim()
+            ? encryptSecret(payload.telegramChatId.trim(), config.encryptionKey)
+            : null,
         updated_at: new Date().toISOString(),
     };
 
@@ -161,7 +164,7 @@ async function saveUserApiCredentials(request, payload) {
 
 async function getUserApiCredentialRow(userId, config) {
     const rows = await requestSupabaseJson(
-        `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(userId)}&select=kiwoom_app_key_encrypted,kiwoom_secret_key_encrypted,telegram_bot_token_encrypted&limit=1`,
+        `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(userId)}&select=kiwoom_app_key_encrypted,kiwoom_secret_key_encrypted,telegram_bot_token_encrypted,telegram_chat_id_encrypted&limit=1`,
         {
             headers: {
                 apikey: config.serviceKey,
@@ -191,12 +194,28 @@ async function getKiwoomCredentialsForRequest(request, requestUrl = null) {
         telegramBotToken: row.telegram_bot_token_encrypted
             ? decryptSecret(row.telegram_bot_token_encrypted, config.encryptionKey)
             : '',
+        telegramChatId: row.telegram_chat_id_encrypted
+            ? decryptSecret(row.telegram_chat_id_encrypted, config.encryptionKey)
+            : '',
+    };
+}
+
+async function getUserIntegrationStatus(request, requestUrl = null) {
+    const config = getBackendSupabaseConfig();
+    const accessToken = getAuthorizationToken(request, requestUrl);
+    const user = await getSupabaseUser(accessToken, config);
+    const row = await getUserApiCredentialRow(user.id, config);
+
+    return {
+        kiwoomConfigured: Boolean(row?.kiwoom_app_key_encrypted && row?.kiwoom_secret_key_encrypted),
+        telegramConfigured: Boolean(row?.telegram_bot_token_encrypted && row?.telegram_chat_id_encrypted),
     };
 }
 
 module.exports = {
     getAuthenticatedSupabaseUser,
     getBackendSupabaseConfig,
+    getUserIntegrationStatus,
     getKiwoomCredentialsForRequest,
     requestSupabaseJson,
     saveUserApiCredentials,

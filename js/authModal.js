@@ -23,9 +23,11 @@ const TEXT = {
     kiwoomAppKey: '\uD0A4\uC6C0 API \uC571\uD0A4',
     kiwoomSecretKey: '\uD0A4\uC6C0 API \uC2DC\uD06C\uB9BF\uD0A4',
     telegramBotKey: '\uD154\uB808\uADF8\uB7A8 \uBD07 API \uD0A4',
+    telegramChatId: '\uD154\uB808\uADF8\uB7A8 Chat ID',
     appKeyPlaceholder: '\uC571\uD0A4\uB97C \uC785\uB825\uD558\uC138\uC694',
     secretKeyPlaceholder: '\uC2DC\uD06C\uB9BF\uD0A4\uB97C \uC785\uB825\uD558\uC138\uC694',
     botKeyPlaceholder: '\uBD07 \uD1A0\uD070\uC744 \uC785\uB825\uD558\uC138\uC694',
+    chatIdPlaceholder: 'Chat ID\uB97C \uC785\uB825\uD558\uC138\uC694',
     save: '\uC800\uC7A5',
 };
 
@@ -276,6 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
             kiwoomAppKey: String(formData.get('kiwoomAppKey') || '').trim(),
             kiwoomSecretKey: String(formData.get('kiwoomSecretKey') || '').trim(),
             telegramBotToken: String(formData.get('telegramBotToken') || '').trim(),
+            telegramChatId: String(formData.get('telegramChatId') || '').trim(),
         };
 
         if (!payload.kiwoomAppKey || !payload.kiwoomSecretKey) {
@@ -391,6 +394,10 @@ function getAuthModalMarkup() {
                 <label class="auth-field">
                     <span>${TEXT.telegramBotKey}</span>
                     <input type="password" name="telegramBotToken" autocomplete="off" placeholder="${TEXT.botKeyPlaceholder}">
+                </label>
+                <label class="auth-field">
+                    <span>${TEXT.telegramChatId}</span>
+                    <input type="password" name="telegramChatId" autocomplete="off" placeholder="${TEXT.chatIdPlaceholder}">
                 </label>
                 <button type="submit" class="auth-submit-button" data-default-text="${TEXT.save}">${TEXT.save}</button>
             </form>
