@@ -2186,8 +2186,15 @@ body.overflow-hidden {
     text-align: left;
 }
 
-.indicator-search-option:hover {
-    background-color: #1e293b;
+.indicator-search-option:hover,
+.indicator-search-option.is-active {
+    background-color: #334155;
+}
+
+.indicator-search-option.is-active {
+    box-shadow: inset 3px 0 0 #10b981;
+    color: #ffffff;
+    outline: 1px solid rgba(16, 185, 129, 0.85);
 }
 
 .indicator-search-option strong {

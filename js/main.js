@@ -136,6 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchTimer = null;
     let latestResults = [];
     let activeSearchIndex = -1;
+    let activeIndicatorSearchIndex = -1;
     const SEARCH_DRAFT_STORAGE_KEY = 'autotrading.stockSearchDraft';
     const isStaticStrategyChart = document.body.dataset.chartMode === 'strategy';
     const chartDataSource = document.body.dataset.chartSource || 'kiwoom';
@@ -1042,17 +1043,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const hideIndicatorDropdown = () => {
+        activeIndicatorSearchIndex = -1;
         indicatorSearchDropdown?.classList.add('hidden');
+        indicatorSearchInput?.setAttribute('aria-expanded', 'false');
     };
 
     const renderIndicatorDropdown = () => {
         if (!indicatorSearchDropdown) return;
 
         const matches = getMatchingIndicatorDefinitions(indicatorSearchInput?.value);
+        activeIndicatorSearchIndex = matches.length ? 0 : -1;
         indicatorSearchDropdown.innerHTML = matches.length
-            ? matches.map((definition) => {
+            ? matches.map((definition, index) => {
+                const activeClass = index === activeIndicatorSearchIndex ? ' is-active' : '';
+                const selected = index === activeIndicatorSearchIndex ? 'true' : 'false';
                 return `
-                    <button type="button" class="indicator-search-option" data-indicator-key="${definition.key}">
+                    <button type="button" class="indicator-search-option${activeClass}" data-indicator-key="${definition.key}" aria-selected="${selected}">
                         <strong>${definition.name}</strong>
                         <span>${definition.description}</span>
                     </button>
@@ -1061,6 +1067,77 @@ document.addEventListener('DOMContentLoaded', () => {
             : '<div class="indicator-empty">추가할 보조지표가 없습니다.</div>';
 
         indicatorSearchDropdown.classList.remove('hidden');
+        indicatorSearchInput?.setAttribute('aria-expanded', 'true');
+    };
+
+    const getIndicatorSearchOptions = () => {
+        return Array.from(indicatorSearchDropdown?.querySelectorAll('[data-indicator-key]') || []);
+    };
+
+    const updateActiveIndicatorSearchOption = () => {
+        const options = getIndicatorSearchOptions();
+        options.forEach((option, index) => {
+            const isActive = index === activeIndicatorSearchIndex;
+            option.classList.toggle('is-active', isActive);
+            option.setAttribute('aria-selected', String(isActive));
+            if (isActive) {
+                option.scrollIntoView({ block: 'nearest' });
+            }
+        });
+    };
+
+    const moveActiveIndicatorSearchOption = (direction) => {
+        const options = getIndicatorSearchOptions();
+        if (!options.length) return;
+        activeIndicatorSearchIndex = activeIndicatorSearchIndex < 0 ? 0 : activeIndicatorSearchIndex;
+        activeIndicatorSearchIndex = (activeIndicatorSearchIndex + direction + options.length) % options.length;
+        updateActiveIndicatorSearchOption();
+    };
+
+    const addActiveIndicatorSearchOption = () => {
+        const options = getIndicatorSearchOptions();
+        const option = options[activeIndicatorSearchIndex];
+        if (!option) {
+            addIndicatorByQuery();
+            return;
+        }
+        addIndicatorByKey(option.dataset.indicatorKey);
+    };
+
+    const isIndicatorDropdownOpen = () => {
+        return Boolean(indicatorSearchDropdown && !indicatorSearchDropdown.classList.contains('hidden'));
+    };
+
+    const handleIndicatorSearchNavigationKey = (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (!isIndicatorDropdownOpen() || !getIndicatorSearchOptions().length) {
+                renderIndicatorDropdown();
+            }
+            moveActiveIndicatorSearchOption(1);
+            return true;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (!isIndicatorDropdownOpen() || !getIndicatorSearchOptions().length) {
+                renderIndicatorDropdown();
+            }
+            moveActiveIndicatorSearchOption(-1);
+            return true;
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            addActiveIndicatorSearchOption();
+            return true;
+        }
+
+        return false;
+    };
+
+    const shouldHandleIndicatorSearchNavigation = () => {
+        return document.activeElement === indicatorSearchInput || isIndicatorDropdownOpen();
     };
 
     const findIndicatorDefinition = (query) => {
@@ -1209,10 +1286,16 @@ document.addEventListener('DOMContentLoaded', () => {
         indicatorAddButton?.addEventListener('click', addIndicatorByQuery);
         indicatorSearchInput?.addEventListener('focus', renderIndicatorDropdown);
         indicatorSearchInput?.addEventListener('input', renderIndicatorDropdown);
+        document.addEventListener('keydown', (event) => {
+            if (!shouldHandleIndicatorSearchNavigation()) return;
+            if (handleIndicatorSearchNavigationKey(event)) {
+                event.indicatorSearchHandled = true;
+                event.stopPropagation();
+            }
+        }, true);
         indicatorSearchInput?.addEventListener('keydown', (event) => {
-            if (event.key !== 'Enter') return;
-            event.preventDefault();
-            addIndicatorByQuery();
+            if (event.indicatorSearchHandled) return;
+            handleIndicatorSearchNavigationKey(event);
         });
 
         indicatorSearchDropdown?.addEventListener('mousedown', (event) => {
@@ -1220,6 +1303,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const option = event.target.closest('[data-indicator-key]');
             if (!option) return;
             addIndicatorByKey(option.dataset.indicatorKey);
+        });
+
+        indicatorSearchDropdown?.addEventListener('mouseover', (event) => {
+            const option = event.target.closest('[data-indicator-key]');
+            if (!option) return;
+            const options = getIndicatorSearchOptions();
+            activeIndicatorSearchIndex = options.indexOf(option);
+            updateActiveIndicatorSearchOption();
         });
 
         document.addEventListener('click', (event) => {
