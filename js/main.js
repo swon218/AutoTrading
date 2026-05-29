@@ -136,7 +136,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const autoTradeStrategySelect = document.getElementById('autoTradeStrategySelect');
     const autoTradeCashInput = document.getElementById('autoTradeCashInput');
     const autoTradeMaxPriceInput = document.getElementById('autoTradeMaxPriceInput');
+    const autoTradeMinPriceInput = document.getElementById('autoTradeMinPriceInput');
     const autoTradeQuantityInput = document.getElementById('autoTradeQuantityInput');
+    const autoTradePriceRangeCheckbox = document.getElementById('autoTradePriceRangeCheckbox');
     const autoTradeCashGuardCheckbox = document.getElementById('autoTradeCashGuardCheckbox');
     const autoTradeTelegramStatus = document.getElementById('autoTradeTelegramStatus');
     const autoTradeTelegramStatusText = document.getElementById('autoTradeTelegramStatusText');
@@ -498,7 +500,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const updateAutoTradeSubmitState = () => {
         if (!autoTradeSubmitButton) return;
-        autoTradeSubmitButton.disabled = !autoTradeCashGuardCheckbox?.checked;
+        autoTradeSubmitButton.disabled = !autoTradePriceRangeCheckbox?.checked
+            || !autoTradeCashGuardCheckbox?.checked;
     };
 
     const renderPendingOrders = (orders = []) => {
@@ -994,6 +997,7 @@ document.addEventListener('DOMContentLoaded', () => {
         submitAutoTradeRule();
     });
     autoTradeCashGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
+    autoTradePriceRangeCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
 
     const getIndicatorFieldValue = (indicator, field) => {
         const values = normalizeIndicatorValues(indicator.key, indicator.values);
@@ -1227,7 +1231,9 @@ document.addEventListener('DOMContentLoaded', () => {
             stockName: stockEls.name?.textContent || '',
             strategyId,
             maxBuyPrice: parseOrderNumber(autoTradeMaxPriceInput?.value),
+            minBuyPrice: parseOrderNumber(autoTradeMinPriceInput?.value),
             orderQuantity: parseOrderNumber(autoTradeQuantityInput?.value),
+            priceRangeAgreed: Boolean(autoTradePriceRangeCheckbox?.checked),
             cashGuardAgreed: Boolean(autoTradeCashGuardCheckbox?.checked),
             telegramAlertEnabled: true,
             autoOrderEnabled: true,
@@ -1248,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             setAutoTradeMessage(error.message || '자동매매 설정 저장에 실패했습니다.', 'error');
         } finally {
-            autoTradeSubmitButton.disabled = false;
+            updateAutoTradeSubmitState();
         }
     };
 

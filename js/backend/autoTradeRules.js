@@ -22,6 +22,7 @@ function ruleRowToDto(row) {
         strategyName: row.strategies?.name || '',
         isEnabled: Boolean(row.is_enabled),
         maxBuyPrice: row.max_buy_price === null ? null : Number(row.max_buy_price),
+        minBuyPrice: row.min_buy_price === null ? null : Number(row.min_buy_price),
         orderQuantity: row.order_quantity === null ? null : Number(row.order_quantity),
         orderAmount: row.order_amount === null ? null : Number(row.order_amount),
         cashGuardAgreed: Boolean(row.cash_guard_agreed),
@@ -45,8 +46,10 @@ function validateRulePayload(payload) {
     const stockName = String(payload.stockName || '').trim();
     const strategyId = String(payload.strategyId || '').trim();
     const maxBuyPrice = numberOrNull(payload.maxBuyPrice);
+    const minBuyPrice = numberOrNull(payload.minBuyPrice);
     const orderQuantity = numberOrNull(payload.orderQuantity);
     const orderAmount = numberOrNull(payload.orderAmount);
+    const priceRangeAgreed = Boolean(payload.priceRangeAgreed);
     const cashGuardAgreed = Boolean(payload.cashGuardAgreed);
 
     if (!/^[A-Za-z0-9_]+$/.test(stockCode)) {
@@ -64,8 +67,18 @@ function validateRulePayload(payload) {
         error.statusCode = 400;
         throw error;
     }
+    if (!priceRangeAgreed) {
+        const error = new Error('매수 상한가/하한가 입력 조건에 동의해야 합니다.');
+        error.statusCode = 400;
+        throw error;
+    }
     if (!cashGuardAgreed) {
-        const error = new Error('잔액 초과 시 거래하지 않는 조건에 동의해야 합니다.');
+        const error = new Error('주문가능금액 초과 시 자동매매하지 않는 조건에 동의해야 합니다.');
+        error.statusCode = 400;
+        throw error;
+    }
+    if (maxBuyPrice && minBuyPrice && minBuyPrice > maxBuyPrice) {
+        const error = new Error('매수 하한가는 매수 상한가보다 클 수 없습니다.');
         error.statusCode = 400;
         throw error;
     }
@@ -75,6 +88,7 @@ function validateRulePayload(payload) {
         stockName,
         strategyId,
         maxBuyPrice,
+        minBuyPrice,
         orderQuantity: orderQuantity ? Math.floor(orderQuantity) : null,
         orderAmount: orderAmount ? Math.floor(orderAmount) : null,
         cashGuardAgreed,
@@ -118,6 +132,7 @@ async function saveAutoTradeRule(request, payload, requestUrl = null) {
         strategy_id: rule.strategyId,
         is_enabled: rule.isEnabled,
         max_buy_price: rule.maxBuyPrice,
+        min_buy_price: rule.minBuyPrice,
         order_quantity: rule.orderQuantity,
         order_amount: rule.orderAmount,
         cash_guard_agreed: rule.cashGuardAgreed,

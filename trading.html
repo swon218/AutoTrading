@@ -9,7 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="css/style.css?v=auto-trade-20260530-3">
+    <link rel="stylesheet" href="css/style.css?v=auto-trade-20260530-5">
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
@@ -332,13 +332,6 @@
                             </div>
                         </label>
 
-                        <label class="order-field">
-                            <span>매수 상한가</span>
-                            <div class="order-total-wrap">
-                                <input id="autoTradeMaxPriceInput" type="text" inputmode="numeric" autocomplete="off" placeholder="상한가 입력">
-                            </div>
-                        </label>
-
                         <div class="order-control-row">
                             <label for="autoTradeQuantityInput">주문 수량</label>
                             <div class="order-stepper">
@@ -347,16 +340,34 @@
                             </div>
                         </div>
 
+                        <label class="order-field">
+                            <span>매수 상한가</span>
+                            <div class="order-total-wrap">
+                                <input id="autoTradeMaxPriceInput" type="text" inputmode="numeric" autocomplete="off" placeholder="상한가 입력">
+                            </div>
+                        </label>
+
+                        <label class="order-field">
+                            <span>매수 하한가</span>
+                            <div class="order-total-wrap">
+                                <input id="autoTradeMinPriceInput" type="text" inputmode="numeric" autocomplete="off" placeholder="하한가 입력">
+                            </div>
+                        </label>
+
                         <div id="autoTradeTelegramStatus" class="auto-trade-status is-error">
                             <span class="auto-trade-status-dot" aria-hidden="true"></span>
                             <span id="autoTradeTelegramStatusText">텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다. 회원정보수정에서 입력하세요.</span>
                         </div>
                         <label class="auto-trade-check">
+                            <input id="autoTradePriceRangeCheckbox" type="checkbox">
+                            <span>매수 상한가와 매수 하한가 둘다 입력하지않거나 하나만 입력해도 됩니다.</span>
+                        </label>
+                        <label class="auto-trade-check">
                             <input id="autoTradeCashGuardCheckbox" type="checkbox">
-                            <span>주문 금액이 계좌 주문가능금액보다 크면 자동매매하지 않습니다.</span>
+                            <span>주문가능금액보다 주문하려는 금액이 크면 전략에 도달해도 자동매매되지 않습니다.</span>
                         </label>
 
-                        <button id="autoTradeSubmitButton" type="submit" class="order-submit-button" disabled>자동매매 설정 저장</button>
+                        <button id="autoTradeSubmitButton" type="submit" class="order-submit-button" disabled>자동매매 감시 시작</button>
                         <p id="autoTradeMessage" class="order-message" aria-live="polite"></p>
                     </form>
                 </div>
@@ -366,7 +377,7 @@
 
     </div>
 
-    <script type="module" src="js/authModal.js?v=auto-trade-20260530-4"></script>
-    <script type="module" src="js/main.js?v=auto-trade-20260530-4"></script>
+    <script type="module" src="js/authModal.js?v=auto-trade-20260530-5"></script>
+    <script type="module" src="js/main.js?v=auto-trade-20260530-5"></script>
 </body>
 </html>

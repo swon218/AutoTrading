@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS public.auto_trade_rules (
     strategy_id UUID NOT NULL REFERENCES public.strategies(id) ON DELETE CASCADE,
     is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     max_buy_price NUMERIC(18, 4),
+    min_buy_price NUMERIC(18, 4),
     order_quantity INTEGER,
     order_amount NUMERIC(18, 0),
     cash_guard_agreed BOOLEAN NOT NULL DEFAULT FALSE,
@@ -25,8 +26,26 @@ CREATE TABLE IF NOT EXISTS public.auto_trade_rules (
     CONSTRAINT auto_trade_rules_order_quantity_check CHECK (order_quantity IS NULL OR order_quantity > 0),
     CONSTRAINT auto_trade_rules_order_amount_check CHECK (order_amount IS NULL OR order_amount > 0),
     CONSTRAINT auto_trade_rules_max_buy_price_check CHECK (max_buy_price IS NULL OR max_buy_price > 0),
+    CONSTRAINT auto_trade_rules_min_buy_price_check CHECK (min_buy_price IS NULL OR min_buy_price > 0),
     CONSTRAINT auto_trade_rules_order_input_check CHECK (order_quantity IS NOT NULL OR order_amount IS NOT NULL)
 );
+
+ALTER TABLE public.auto_trade_rules
+    ADD COLUMN IF NOT EXISTS min_buy_price NUMERIC(18, 4);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'auto_trade_rules_min_buy_price_check'
+    ) THEN
+        ALTER TABLE public.auto_trade_rules
+            ADD CONSTRAINT auto_trade_rules_min_buy_price_check
+            CHECK (min_buy_price IS NULL OR min_buy_price > 0);
+    END IF;
+END;
+$$;
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_auto_trade_rules_user_stock_strategy
     ON public.auto_trade_rules (user_id, stock_code, strategy_id);

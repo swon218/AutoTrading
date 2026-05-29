@@ -119,6 +119,7 @@ async function processRule(config, rule) {
     const stock = await getStockInfo(rule.stock_code, credentials);
     const price = normalizeNumber(stock.price || latestCandle.close);
     const maxBuyPrice = normalizeNumber(rule.max_buy_price);
+    const minBuyPrice = normalizeNumber(rule.min_buy_price);
     const quantity = Math.floor(normalizeNumber(rule.order_quantity));
     const orderAmount = price * quantity;
 
@@ -128,6 +129,12 @@ async function processRule(config, rule) {
         const message = `Signal matched but price ${price} is above max buy price ${maxBuyPrice}.`;
         await insertEvent(config, rule, 'blocked', message, { price, quantity, orderAmount });
         await sendTelegramMessage(credentials.telegramBotToken, credentials.telegramChatId, `${buildTelegramMessage(rule, price, evaluation)}\nBlocked: above max buy price.`);
+        return;
+    }
+    if (minBuyPrice > 0 && price < minBuyPrice) {
+        const message = `Signal matched but price ${price} is below min buy price ${minBuyPrice}.`;
+        await insertEvent(config, rule, 'blocked', message, { price, quantity, orderAmount });
+        await sendTelegramMessage(credentials.telegramBotToken, credentials.telegramChatId, `${buildTelegramMessage(rule, price, evaluation)}\nBlocked: below min buy price.`);
         return;
     }
 
