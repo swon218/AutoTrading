@@ -1252,18 +1252,11 @@ document.addEventListener('DOMContentLoaded', () => {
         autoTradeTelegramVerifyButton.textContent = '인증 중';
         setAutoTradeMessage('텔레그램 인증코드를 보내는 중입니다...');
         try {
-            let response = await authFetch('/api/telegram/verification/start', {
+            const response = await authFetch('/api/telegram/test', {
                 method: 'POST',
                 cache: 'no-store',
             });
-            let payload = await response.json().catch(() => ({}));
-            if (response.status === 404 || /not found/i.test(String(payload.message || payload.error || ''))) {
-                response = await authFetch('/api/telegram/test', {
-                    method: 'POST',
-                    cache: 'no-store',
-                });
-                payload = await response.json().catch(() => ({}));
-            }
+            const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
             autoTradeTelegramCodeRow?.classList.remove('hidden');
             autoTradeTelegramCodeInput.value = '';
