@@ -7,6 +7,7 @@ const {
 } = require('./userCredentials');
 
 const VERIFICATION_TTL_MS = 10 * 60 * 1000;
+const pendingTelegramVerifications = new Map();
 
 function getHeaders(config) {
     return {
@@ -79,6 +80,11 @@ async function startTelegramVerification(request, requestUrl = null) {
         ].join('\n'),
     );
 
+    pendingTelegramVerifications.set(user.id, {
+        hash: hashVerificationCode(user.id, code, config.encryptionKey),
+        expiresAt: new Date(expiresAt).getTime(),
+    });
+
     await requestSupabaseJson(
         `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(user.id)}`,
         {
@@ -86,8 +92,6 @@ async function startTelegramVerification(request, requestUrl = null) {
             headers: getHeaders(config),
             body: JSON.stringify({
                 telegram_verified_at: null,
-                telegram_verification_code_hash: hashVerificationCode(user.id, code, config.encryptionKey),
-                telegram_verification_expires_at: expiresAt,
                 updated_at: new Date().toISOString(),
             }),
         },
@@ -107,15 +111,9 @@ async function confirmTelegramVerification(request, payload = {}, requestUrl = n
         throw error;
     }
 
-    const rows = await requestSupabaseJson(
-        `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(user.id)}&select=telegram_verification_code_hash,telegram_verification_expires_at&limit=1`,
-        { headers: getHeaders(config) },
-    );
-    const row = Array.isArray(rows) ? rows[0] : null;
-    const expiresAt = row?.telegram_verification_expires_at
-        ? new Date(row.telegram_verification_expires_at).getTime()
-        : 0;
-    const expectedHash = row?.telegram_verification_code_hash || '';
+    const pending = pendingTelegramVerifications.get(user.id);
+    const expiresAt = pending?.expiresAt || 0;
+    const expectedHash = pending?.hash || '';
     const actualHash = hashVerificationCode(user.id, code, config.encryptionKey);
 
     if (!expectedHash || !expiresAt || expiresAt < Date.now()) {
@@ -130,6 +128,7 @@ async function confirmTelegramVerification(request, payload = {}, requestUrl = n
     }
 
     const verifiedAt = new Date().toISOString();
+    pendingTelegramVerifications.delete(user.id);
     await requestSupabaseJson(
         `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(user.id)}`,
         {
@@ -137,8 +136,6 @@ async function confirmTelegramVerification(request, payload = {}, requestUrl = n
             headers: getHeaders(config),
             body: JSON.stringify({
                 telegram_verified_at: verifiedAt,
-                telegram_verification_code_hash: null,
-                telegram_verification_expires_at: null,
                 updated_at: verifiedAt,
             }),
         },
