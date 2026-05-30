@@ -62,7 +62,7 @@ COMMENT ON COLUMN market_data.stock_candles_15m.candle_time IS '15-minute candle
 COMMENT ON COLUMN market_data.stock_candles_15m.adjusted_price_type IS 'Kiwoom upd_stkpc_tp value. 1 means adjusted price.';
 
 -- Supabase watchlist storage.
--- Run this in the Supabase SQL editor for the project used by js/supabaseClient.js.
+-- Run this in the Supabase SQL editor for the project used by js/frontend/supabaseClient.js.
 
 CREATE TABLE IF NOT EXISTS public.watchlist_groups (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

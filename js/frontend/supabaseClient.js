@@ -20,7 +20,7 @@ export const supabase = isSupabaseConfigured ? createClient(SUPABASE_URL, SUPABA
 
 function assertSupabaseConfigured() {
     if (!supabase) {
-        throw new Error('Supabase publishable key is not configured in js/supabaseClient.js.');
+        throw new Error('Supabase publishable key is not configured in js/frontend/supabaseClient.js.');
     }
 }
 

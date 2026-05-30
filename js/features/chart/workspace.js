@@ -1,10 +1,10 @@
-import { drawStockChart } from '../../chartRenderer.js';
+import { drawStockChart } from '../../frontend/chartRenderer.js';
 import {
     getIndicatorDefinition,
     indicatorDefinitions,
     normalizeIndicatorValues,
 } from '../../indicators/registry.js';
-import { authFetch, createAuthenticatedEventSource } from '../../apiClient.js';
+import { authFetch, createAuthenticatedEventSource } from '../../frontend/apiClient.js';
 import { formatNumber } from './format.js';
 import {
     cloneIndicatorFromDefinition,

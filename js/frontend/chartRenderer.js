@@ -1,4 +1,4 @@
-import { getIndicatorDefinition } from './indicators/registry.js';
+import { getIndicatorDefinition } from '../indicators/registry.js';
 
 export const drawStockChart = ({
     chartCanvas,
