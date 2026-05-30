@@ -29,17 +29,25 @@ function generateVerificationCode() {
 }
 
 async function sendTelegramMessage(botToken, chatId, text) {
-    if (!botToken || !chatId) {
+    const normalizedBotToken = String(botToken || '').trim();
+    const normalizedChatId = String(chatId || '').trim();
+
+    if (!normalizedBotToken || !normalizedChatId) {
         const error = new Error('Telegram bot token and chat ID are required.');
         error.statusCode = 400;
         throw error;
     }
+    if (!/^\d+:[A-Za-z0-9_-]+$/.test(normalizedBotToken)) {
+        const error = new Error('텔레그램 봇 토큰 형식이 올바르지 않습니다. BotFather에서 받은 전체 토큰을 입력하세요.');
+        error.statusCode = 400;
+        throw error;
+    }
 
-    const response = await fetch(`https://api.telegram.org/bot${encodeURIComponent(botToken)}/sendMessage`, {
+    const response = await fetch(`https://api.telegram.org/bot${normalizedBotToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify({
-            chat_id: chatId,
+            chat_id: normalizedChatId,
             text,
             disable_web_page_preview: true,
         }),
@@ -47,7 +55,15 @@ async function sendTelegramMessage(botToken, chatId, text) {
     const payload = await response.json().catch(() => ({}));
 
     if (!response.ok || payload.ok === false) {
-        const message = payload.description || `Telegram request failed: ${response.status}`;
+        const description = String(payload.description || '').trim();
+        let message = description || `Telegram request failed: ${response.status}`;
+        if (response.status === 404 && /not found/i.test(description)) {
+            message = '텔레그램 봇 토큰을 찾지 못했습니다. BotFather에서 받은 토큰을 다시 확인하세요.';
+        } else if (/chat not found/i.test(description)) {
+            message = '텔레그램 Chat ID를 찾지 못했습니다. 봇에게 /start를 먼저 보낸 뒤 Chat ID를 다시 확인하세요.';
+        } else if (/bot was blocked/i.test(description)) {
+            message = '텔레그램 봇이 차단되어 있습니다. 텔레그램에서 봇 차단을 해제하세요.';
+        }
         const error = new Error(message);
         error.statusCode = response.status || 500;
         throw error;
