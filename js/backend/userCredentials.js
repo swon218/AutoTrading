@@ -1,11 +1,6 @@
 const crypto = require('crypto');
 const { loadDotEnv } = require('./env');
 
-const REQUIRED_FIELDS = [
-    'kiwoomAppKey',
-    'kiwoomSecretKey',
-];
-
 function getBackendSupabaseConfig() {
     loadDotEnv();
 
@@ -127,45 +122,61 @@ async function getAuthenticatedSupabaseUser(request, requestUrl = null) {
     return getSupabaseUser(accessToken, config);
 }
 
-function validateCredentialPayload(payload) {
-    for (const field of REQUIRED_FIELDS) {
-        if (!String(payload?.[field] || '').trim()) {
-            const error = new Error('Kiwoom app key and Kiwoom secret key are required.');
-            error.statusCode = 400;
-            throw error;
-        }
-    }
-}
-
 async function saveUserApiCredentials(request, payload) {
-    validateCredentialPayload(payload);
-
     const config = getBackendSupabaseConfig();
     const accessToken = getAuthorizationToken(request);
     const user = await getSupabaseUser(accessToken, config);
+    const existingRow = await getUserApiCredentialRow(user.id, config);
+    const kiwoomAppKey = String(payload.kiwoomAppKey || '').trim();
+    const kiwoomSecretKey = String(payload.kiwoomSecretKey || '').trim();
     const telegramBotToken = normalizeTelegramBotToken(payload.telegramBotToken);
+    const telegramChatId = String(payload.telegramChatId || '').trim();
+    const hasKiwoomAppKey = Boolean(kiwoomAppKey);
+    const hasKiwoomSecretKey = Boolean(kiwoomSecretKey);
+    const hasTelegramBotToken = Boolean(telegramBotToken);
+    const hasTelegramChatId = Boolean(telegramChatId);
+
+    if (hasKiwoomAppKey !== hasKiwoomSecretKey) {
+        const error = new Error('키움 앱키와 시크릿키는 함께 입력해야 합니다.');
+        error.statusCode = 400;
+        throw error;
+    }
+    if (hasTelegramBotToken !== hasTelegramChatId) {
+        const error = new Error('텔레그램 봇 토큰과 Chat ID는 함께 입력해야 합니다.');
+        error.statusCode = 400;
+        throw error;
+    }
+    if (!hasKiwoomAppKey && !hasTelegramBotToken) {
+        const error = new Error('저장할 키 정보를 입력하세요.');
+        error.statusCode = 400;
+        throw error;
+    }
 
     const row = {
         user_id: user.id,
-        kiwoom_app_key_encrypted: encryptSecret(payload.kiwoomAppKey.trim(), config.encryptionKey),
-        kiwoom_secret_key_encrypted: encryptSecret(payload.kiwoomSecretKey.trim(), config.encryptionKey),
-        telegram_bot_token_encrypted: telegramBotToken
-            ? encryptSecret(telegramBotToken, config.encryptionKey)
-            : null,
-        telegram_chat_id_encrypted: payload.telegramChatId?.trim()
-            ? encryptSecret(payload.telegramChatId.trim(), config.encryptionKey)
-            : null,
-        telegram_verified_at: null,
         updated_at: new Date().toISOString(),
     };
 
-    await requestSupabaseJson(`${config.url}/rest/v1/user_api_credentials?on_conflict=user_id`, {
-        method: 'POST',
+    if (hasKiwoomAppKey) {
+        row.kiwoom_app_key_encrypted = encryptSecret(kiwoomAppKey, config.encryptionKey);
+        row.kiwoom_secret_key_encrypted = encryptSecret(kiwoomSecretKey, config.encryptionKey);
+    }
+    if (hasTelegramBotToken) {
+        row.telegram_bot_token_encrypted = encryptSecret(telegramBotToken, config.encryptionKey);
+        row.telegram_chat_id_encrypted = encryptSecret(telegramChatId, config.encryptionKey);
+        row.telegram_verified_at = null;
+    }
+
+    const url = existingRow
+        ? `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(user.id)}`
+        : `${config.url}/rest/v1/user_api_credentials`;
+
+    await requestSupabaseJson(url, {
+        method: existingRow ? 'PATCH' : 'POST',
         headers: {
             apikey: config.serviceKey,
             Authorization: `Bearer ${config.serviceKey}`,
             'Content-Type': 'application/json',
-            Prefer: 'resolution=merge-duplicates',
         },
         body: JSON.stringify(row),
     });

@@ -281,8 +281,16 @@ document.addEventListener('DOMContentLoaded', () => {
             telegramChatId: String(formData.get('telegramChatId') || '').trim(),
         };
 
-        if (!payload.kiwoomAppKey || !payload.kiwoomSecretKey) {
-            setAuthMessage('\uD0A4\uC6C0 \uC571\uD0A4\uC640 \uC2DC\uD06C\uB9BF\uD0A4\uB294 \uBC18\uB4DC\uC2DC \uC785\uB825\uD574\uC8FC\uC138\uC694. \uD154\uB808\uADF8\uB7A8 \uBD07 API \uD0A4\uB294 \uC120\uD0DD\uC785\uB2C8\uB2E4.', 'error');
+        if (Boolean(payload.kiwoomAppKey) !== Boolean(payload.kiwoomSecretKey)) {
+            setAuthMessage('키움 앱키와 시크릿키는 함께 입력해주세요.', 'error');
+            return;
+        }
+        if (Boolean(payload.telegramBotToken) !== Boolean(payload.telegramChatId)) {
+            setAuthMessage('텔레그램 봇 API 키와 Chat ID는 함께 입력해주세요.', 'error');
+            return;
+        }
+        if (!payload.kiwoomAppKey && !payload.telegramBotToken) {
+            setAuthMessage('저장할 키 정보를 입력해주세요.', 'error');
             return;
         }
 
