@@ -1,12 +1,19 @@
-﻿import { drawStockChart } from './chartRenderer.js';
+import { drawStockChart } from '../../chartRenderer.js';
 import {
     getIndicatorDefinition,
     indicatorDefinitions,
     normalizeIndicatorValues,
-} from './indicators/registry.js';
-import { authFetch, createAuthenticatedEventSource } from './apiClient.js';
+} from '../../indicators/registry.js';
+import { authFetch, createAuthenticatedEventSource } from '../../apiClient.js';
+import { formatNumber } from './format.js';
+import {
+    cloneIndicatorFromDefinition,
+    dedupeIndicatorsByKey,
+    normalizeStrategyName,
+} from '../strategies/strategyUtils.js';
+import { buildAutoTradeRulePayload } from '../autoTrade/rulePayload.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+export function initChartWorkspace() {
     const mainWrap = document.querySelector('.main_m');
     const mainTop = document.querySelector('.main_a');
     const mainBottom = document.querySelector('.main_b');
@@ -202,32 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let latestSellableQuantity = 0;
     let holdingRequestId = 0;
 
-    const formatNumber = (value) => {
-        if (value === null || value === undefined || Number.isNaN(Number(value))) {
-            return '-';
-        }
-        return Number(value).toLocaleString('ko-KR');
-    };
-
-    const cloneIndicatorFromDefinition = (definition) => {
-        return {
-            id: `${definition.key}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            key: definition.key,
-            values: Object.fromEntries(definition.fields.map((field) => [field.key, field.value])),
-        };
-    };
-
     const isIndicatorActive = (key) => {
         return activeIndicators.some((indicator) => indicator.key === key);
-    };
-
-    const dedupeIndicatorsByKey = (indicators = []) => {
-        const seenKeys = new Set();
-        return indicators.filter((indicator) => {
-            if (!indicator?.key || seenKeys.has(indicator.key)) return false;
-            seenKeys.add(indicator.key);
-            return true;
-        });
     };
 
     const setRightPanel = (panelName = 'indicator') => {
@@ -1141,8 +1124,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(strategyNameInput?.value || '').trim();
     };
 
-    const normalizeStrategyName = (value) => String(value || '').replace(/\s+/g, '').toLowerCase();
-
     const isDuplicateStrategyName = (name, currentId = '') => {
         const normalized = normalizeStrategyName(name);
         return savedIndicatorStrategies.some((strategy) => {
@@ -1347,20 +1328,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const strategyId = autoTradeStrategySelect?.value || '';
-        const payload = {
-            stockCode: currentStockCode,
+        const payload = buildAutoTradeRulePayload({
+            currentStockCode,
             stockName: stockEls.name?.textContent || '',
             strategyId,
             maxBuyPrice: parseOrderNumber(autoTradeMaxPriceInput?.value),
             minBuyPrice: parseOrderNumber(autoTradeMinPriceInput?.value),
             orderQuantity: parseOrderNumber(autoTradeQuantityInput?.value),
             priceRangeAgreed: Boolean(autoTradePriceRangeCheckbox?.checked),
-            cashGuardAgreed: true,
             signalGuardAgreed: Boolean(autoTradeSignalGuardCheckbox?.checked),
-            telegramAlertEnabled: true,
-            autoOrderEnabled: true,
-            isEnabled: true,
-        };
+        });
 
         autoTradeSubmitButton.disabled = true;
         setAutoTradeMessage('자동매매 설정을 저장하는 중입니다...');
@@ -2924,4 +2901,4 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         loadDefaultRankingStock();
     }
-});
+}
