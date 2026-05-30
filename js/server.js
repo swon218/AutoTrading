@@ -36,7 +36,11 @@ const {
     getAutoTradeEngineStatus,
     startAutoTradeEngine,
 } = require('./backend/autoTradeEngine');
-const { testTelegramConnection } = require('./backend/telegram');
+const {
+    confirmTelegramVerification,
+    startTelegramVerification,
+    testTelegramConnection,
+} = require('./backend/telegram');
 const {
     createWatchlist,
     deleteWatchlist,
@@ -245,6 +249,27 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'POST' && requestUrl.pathname === '/api/telegram/test') {
         try {
             const result = await testTelegramConnection(request, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/telegram/verification/start') {
+        try {
+            const result = await startTelegramVerification(request, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/telegram/verification/confirm') {
+        try {
+            const payload = await parseRequestBody(request);
+            const result = await confirmTelegramVerification(request, payload, requestUrl);
             sendJson(response, 200, result);
         } catch (error) {
             sendJson(response, error.statusCode || 500, { message: error.message });

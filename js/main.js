@@ -143,6 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const autoTradeTelegramStatus = document.getElementById('autoTradeTelegramStatus');
     const autoTradeTelegramStatusText = document.getElementById('autoTradeTelegramStatusText');
     const autoTradeTelegramVerifyButton = document.getElementById('autoTradeTelegramVerifyButton');
+    const autoTradeTelegramCodeRow = document.getElementById('autoTradeTelegramCodeRow');
+    const autoTradeTelegramCodeInput = document.getElementById('autoTradeTelegramCodeInput');
+    const autoTradeTelegramConfirmButton = document.getElementById('autoTradeTelegramConfirmButton');
     const autoTradeSubmitButton = document.getElementById('autoTradeSubmitButton');
     const autoTradeMessage = document.getElementById('autoTradeMessage');
 
@@ -1012,6 +1015,16 @@ document.addEventListener('DOMContentLoaded', () => {
     autoTradePriceRangeCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
     autoTradeSignalGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
     autoTradeTelegramVerifyButton?.addEventListener('click', verifyTelegramConnection);
+    autoTradeTelegramConfirmButton?.addEventListener('click', confirmTelegramConnection);
+    autoTradeTelegramCodeInput?.addEventListener('input', () => {
+        autoTradeTelegramCodeInput.value = autoTradeTelegramCodeInput.value.replace(/[^\d]/g, '').slice(0, 6);
+    });
+    autoTradeTelegramCodeInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            confirmTelegramConnection();
+        }
+    });
 
     const getIndicatorFieldValue = (indicator, field) => {
         const values = normalizeIndicatorValues(indicator.key, indicator.values);
@@ -1203,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             autoTradeTelegramStatus.classList.toggle('is-error', status === 'missing');
             autoTradeTelegramStatus.classList.toggle('is-warning', status === 'needs-verification');
             autoTradeTelegramVerifyButton?.classList.toggle('hidden', status !== 'needs-verification');
+            autoTradeTelegramCodeRow?.classList.add('hidden');
         };
 
         setTelegramStatusText('텔레그램 연동 상태를 확인 중입니다.');
@@ -1236,23 +1250,53 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!autoTradeTelegramVerifyButton) return;
         autoTradeTelegramVerifyButton.disabled = true;
         autoTradeTelegramVerifyButton.textContent = '인증 중';
-        setAutoTradeMessage('텔레그램 인증 메시지를 보내는 중입니다...');
+        setAutoTradeMessage('텔레그램 인증코드를 보내는 중입니다...');
         try {
-            const response = await authFetch('/api/telegram/test', {
+            const response = await authFetch('/api/telegram/verification/start', {
                 method: 'POST',
                 cache: 'no-store',
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
-            setAutoTradeMessage('텔레그램 인증이 완료되었습니다.', 'success');
-            await fetchIntegrationStatus();
+            autoTradeTelegramCodeRow?.classList.remove('hidden');
+            autoTradeTelegramCodeInput.value = '';
+            autoTradeTelegramCodeInput?.focus();
+            setAutoTradeMessage('텔레그램으로 받은 6자리 인증코드를 입력하세요.', 'success');
         } catch (error) {
-            setAutoTradeMessage(error.message || '텔레그램 인증에 실패했습니다.', 'error');
+            setAutoTradeMessage(error.message || '텔레그램 인증코드 발송에 실패했습니다.', 'error');
         } finally {
             autoTradeTelegramVerifyButton.disabled = false;
             autoTradeTelegramVerifyButton.textContent = '인증하기';
         }
     }
+
+    const confirmTelegramConnection = async () => {
+        if (!autoTradeTelegramConfirmButton) return;
+        const code = String(autoTradeTelegramCodeInput?.value || '').replace(/[^\d]/g, '');
+        if (!/^\d{6}$/.test(code)) {
+            setAutoTradeMessage('6자리 인증코드를 입력하세요.', 'error');
+            return;
+        }
+
+        autoTradeTelegramConfirmButton.disabled = true;
+        setAutoTradeMessage('텔레그램 인증코드를 확인하는 중입니다...');
+        try {
+            const response = await authFetch('/api/telegram/verification/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({ code }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            autoTradeTelegramCodeRow?.classList.add('hidden');
+            setAutoTradeMessage('텔레그램 인증이 완료되었습니다.', 'success');
+            await fetchIntegrationStatus();
+        } catch (error) {
+            setAutoTradeMessage(error.message || '텔레그램 인증에 실패했습니다.', 'error');
+        } finally {
+            autoTradeTelegramConfirmButton.disabled = false;
+        }
+    };
 
     const loadAutoTradePanel = async () => {
         if (!savedIndicatorStrategies.length) {

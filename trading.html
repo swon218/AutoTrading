@@ -9,7 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="css/style.css?v=auto-trade-20260530-8">
+    <link rel="stylesheet" href="css/style.css?v=auto-trade-20260530-9">
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
@@ -361,6 +361,10 @@
                             <span id="autoTradeTelegramStatusText">텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다. 회원정보수정에서 입력하세요.</span>
                             <button id="autoTradeTelegramVerifyButton" type="button" class="auto-trade-verify-button hidden">인증하기</button>
                         </div>
+                        <div id="autoTradeTelegramCodeRow" class="auto-trade-code-row hidden">
+                            <input id="autoTradeTelegramCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="인증코드 입력">
+                            <button id="autoTradeTelegramConfirmButton" type="button">확인</button>
+                        </div>
                         <label class="auto-trade-check">
                             <input id="autoTradePriceRangeCheckbox" type="checkbox">
                             <span>매수 상한가와 매수 하한가 둘다 입력하지않거나 하나만 입력해도 됩니다.</span>
@@ -380,7 +384,7 @@
 
     </div>
 
-    <script type="module" src="js/authModal.js?v=auto-trade-20260530-8"></script>
-    <script type="module" src="js/main.js?v=auto-trade-20260530-8"></script>
+    <script type="module" src="js/authModal.js?v=auto-trade-20260530-9"></script>
+    <script type="module" src="js/main.js?v=auto-trade-20260530-9"></script>
 </body>
 </html>

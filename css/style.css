@@ -1277,6 +1277,40 @@ body.overflow-hidden {
     background-color: rgba(245, 158, 11, 0.22);
 }
 
+.auto-trade-code-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 4rem;
+    gap: 0.45rem;
+}
+
+.auto-trade-code-row input {
+    min-width: 0;
+    border: 1px solid #334155;
+    border-radius: 0.4rem;
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 0.42rem 0.65rem;
+    font-size: 0.78rem;
+    outline: none;
+}
+
+.auto-trade-code-row input:focus {
+    border-color: #10b981;
+}
+
+.auto-trade-code-row button {
+    border: 0;
+    border-radius: 0.4rem;
+    background-color: #334155;
+    color: #ffffff;
+    font-size: 0.76rem;
+    font-weight: 800;
+}
+
+.auto-trade-code-row button:hover {
+    background-color: #475569;
+}
+
 .order-field,
 .order-control-row {
     display: grid;
