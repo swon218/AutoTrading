@@ -759,9 +759,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const changeOrderInputValue = (target, delta) => {
-        const input = target === 'quantity' ? orderQuantityInput : orderPriceInput;
+        const input = target === 'autoQuantity'
+            ? autoTradeQuantityInput
+            : target === 'quantity' ? orderQuantityInput : orderPriceInput;
         if (!input || input.disabled) return;
-        const step = target === 'quantity' ? 1 : getOrderPriceStep();
+        const step = target === 'quantity' || target === 'autoQuantity' ? 1 : getOrderPriceStep();
         let nextValue = Math.max(0, parseOrderNumber(input.value) + (Number(delta) || 0) * step);
         if (target === 'quantity' && currentOrderAction === 'sell' && latestSellableQuantity > 0) {
             nextValue = Math.min(nextValue, latestSellableQuantity);
@@ -875,6 +877,16 @@ document.addEventListener('DOMContentLoaded', () => {
         clampSellQuantityInput();
         formatOrderInputValue(orderQuantityInput);
         updateOrderTotal();
+    });
+
+    autoTradeQuantityInput?.addEventListener('input', () => {
+        sanitizeOrderNumberInput(autoTradeQuantityInput);
+    });
+
+    autoTradeQuantityInput?.addEventListener('beforeinput', allowOnlyOrderDigits);
+
+    autoTradeQuantityInput?.addEventListener('blur', () => {
+        formatOrderInputValue(autoTradeQuantityInput);
     });
 
     pendingOrdersList?.addEventListener('beforeinput', (event) => {

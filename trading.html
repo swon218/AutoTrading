@@ -273,7 +273,7 @@
                         </div>
 
                         <div class="order-control-row order-trade-section">
-                            <label for="orderQuantityInput">수량</label>
+                            <label for="orderQuantityInput">주문수량</label>
                             <div class="order-stepper">
                                 <input id="orderQuantityInput" type="text" inputmode="numeric" autocomplete="off" placeholder="수량 입력">
                                 <span class="order-unit">주</span>
@@ -333,10 +333,12 @@
                         </label>
 
                         <div class="order-control-row">
-                            <label for="autoTradeQuantityInput">주문 수량</label>
+                            <label for="autoTradeQuantityInput">주문수량</label>
                             <div class="order-stepper">
                                 <input id="autoTradeQuantityInput" type="text" inputmode="numeric" autocomplete="off" placeholder="수량 입력">
                                 <span class="order-unit">주</span>
+                                <button type="button" data-step-target="autoQuantity" data-step="-1" aria-label="자동매매 수량 감소">-</button>
+                                <button type="button" data-step-target="autoQuantity" data-step="1" aria-label="자동매매 수량 증가">+</button>
                             </div>
                         </div>
 
