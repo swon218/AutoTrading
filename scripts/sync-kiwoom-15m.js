@@ -20,8 +20,12 @@ function parseArgs(argv) {
         codes: [],
         limitStocks: 0,
         maxPagesPerStock: 0,
+        missingOnly: false,
+        startDate: '',
+        endDate: '',
         startFrom: '',
     };
+    const positional = [];
 
     for (let index = 0; index < argv.length; index += 1) {
         const arg = argv[index];
@@ -48,12 +52,32 @@ function parseArgs(argv) {
         } else if (arg === '--max-pages-per-stock') {
             options.maxPagesPerStock = Number(next || 0);
             index += 1;
+        } else if (arg === '--missing-only') {
+            options.missingOnly = true;
+        } else if (arg === '--start-date') {
+            options.startDate = String(next || '').trim();
+            index += 1;
+        } else if (arg === '--end-date') {
+            options.endDate = String(next || '').trim();
+            index += 1;
         } else if (arg === '--start-from') {
             options.startFrom = String(next || '').trim().replace(/^A/i, '');
             index += 1;
         } else if (arg === '--help' || arg === '-h') {
             options.help = true;
+        } else if (!arg.startsWith('-')) {
+            positional.push(arg);
         }
+    }
+
+    if (!options.codes.length && positional[0]) {
+        options.codes = String(positional[0])
+            .split(',')
+            .map((code) => code.trim().replace(/^A/i, ''))
+            .filter(Boolean);
+    }
+    if (!options.maxPagesPerStock && positional[1]) {
+        options.maxPagesPerStock = Number(positional[1] || 0);
     }
 
     return options;
@@ -67,6 +91,9 @@ Usage:
 Options:
   --years 5                  How far back to collect 15m candles.
   --codes 005930,000660      Collect only these stock codes.
+  --missing-only             Collect only stocks not present in PostgreSQL.
+  --start-date 2025-05-02    Start date for selected candles.
+  --end-date 2026-05-27      End date for selected candles.
   --start-from 005930        Resume all-stock collection from this code.
   --limit-stocks 10          Limit number of stocks for a dry run.
   --max-pages-per-stock 3    Limit continuation pages per stock for testing.
@@ -83,6 +110,30 @@ function getCutoffDate(years) {
     const cutoff = new Date();
     cutoff.setFullYear(cutoff.getFullYear() - years);
     return cutoff;
+}
+
+function getStartDate(options) {
+    if (!options.startDate) return getCutoffDate(options.years);
+    const dateText = options.startDate.includes('T')
+        ? options.startDate
+        : `${options.startDate}T00:00:00+09:00`;
+    const date = new Date(dateText);
+    if (!Number.isFinite(date.getTime())) {
+        throw new Error(`Invalid --start-date: ${options.startDate}`);
+    }
+    return date;
+}
+
+function getEndDate(options) {
+    if (!options.endDate) return null;
+    const dateText = options.endDate.includes('T')
+        ? options.endDate
+        : `${options.endDate}T23:59:59+09:00`;
+    const date = new Date(dateText);
+    if (!Number.isFinite(date.getTime())) {
+        throw new Error(`Invalid --end-date: ${options.endDate}`);
+    }
+    return date;
 }
 
 function getChartItems(payload) {
@@ -114,6 +165,11 @@ function isAtOrAfter(candle, cutoff) {
     return new Date(candle.time).getTime() >= cutoff.getTime();
 }
 
+function isAtOrBefore(candle, endDate) {
+    if (!endDate) return true;
+    return new Date(candle.time).getTime() <= endDate.getTime();
+}
+
 async function upsertInChunks(stockCode, candles, batchSize) {
     let rowCount = 0;
 
@@ -138,7 +194,7 @@ async function fetchWithRetry(apiId, body, continuation, attempt = 1) {
     }
 }
 
-async function syncStock(stock, options, cutoff) {
+async function syncStock(stock, options, cutoff, endDate) {
     const body = {
         stk_cd: stock.code,
         tic_scope: TIC_SCOPE,
@@ -164,6 +220,7 @@ async function syncStock(stock, options, cutoff) {
             .filter(Boolean);
         const selectedCandles = candles
             .filter((candle) => isAtOrAfter(candle, cutoff))
+            .filter((candle) => isAtOrBefore(candle, endDate))
             .filter((candle) => {
                 if (seenTimes.has(candle.time)) return false;
                 seenTimes.add(candle.time);
@@ -205,6 +262,11 @@ async function getTargetStocks(options) {
     }
 
     let stocks = await getStockList();
+    if (options.missingOnly) {
+        const result = await query('SELECT DISTINCT stock_code FROM market_data.stock_candles_15m');
+        const existingCodes = new Set(result.rows.map((row) => row.stock_code));
+        stocks = stocks.filter((stock) => !existingCodes.has(stock.code));
+    }
     if (options.startFrom) {
         const startIndex = stocks.findIndex((stock) => stock.code === options.startFrom);
         if (startIndex >= 0) stocks = stocks.slice(startIndex);
@@ -227,19 +289,22 @@ async function main() {
         throw new Error('POSTGRES_URL is missing. Add it to .env before running this script.');
     }
 
-    const cutoff = getCutoffDate(options.years);
+    const cutoff = getStartDate(options);
+    const endDate = getEndDate(options);
     const stocks = await getTargetStocks(options);
     let succeeded = 0;
     let failed = 0;
 
     await query('SELECT 1');
-    console.log(`Start sync: stocks=${stocks.length}, cutoff=${cutoff.toISOString()}, interval=15m`);
+    console.log(
+        `Start sync: stocks=${stocks.length}, cutoff=${cutoff.toISOString()}, end=${endDate ? endDate.toISOString() : 'none'}, interval=15m`,
+    );
 
     for (let index = 0; index < stocks.length; index += 1) {
         const stock = stocks[index];
 
         try {
-            const result = await syncStock(stock, options, cutoff);
+            const result = await syncStock(stock, options, cutoff, endDate);
             succeeded += 1;
             console.log(
                 `[done ${index + 1}/${stocks.length}] ${stock.code} rows=${result.rows} pages=${result.pages}`,

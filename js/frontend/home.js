@@ -59,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
         volumeSpike: { label: '거래량 급증', apiId: 'ka10023' },
     };
     const WATCHLIST_ITEM_LIMIT = 20;
+    const WATCHLIST_VISIBLE_GROUP_COUNT = 4;
     const FAST_WATCHLIST_SOURCE_TYPES = new Set(['realtime', 'gainers', 'losers', 'volume', 'volumeSpike']);
 
     const escapeHtml = (value) => String(value ?? '')
@@ -503,6 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const renderWatchlistTabs = () => {
         if (!watchlistGroupTabs) return;
+        const hasOverflow = watchlistGroups.length > WATCHLIST_VISIBLE_GROUP_COUNT;
         const tabs = watchlistGroups.map((group) => `
             <button class="home-ranking-tab watchlist-tab${group.id === activeWatchlistId ? ' is-active' : ''}" type="button" data-watchlist-id="${escapeHtml(group.id)}">
                 ${escapeHtml(group.name)}
@@ -510,7 +512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
 
         watchlistGroupTabs.innerHTML = `
-            <button class="watchlist-scroll-button is-left" type="button" data-watchlist-scroll="-1" aria-label="관심 그룹 왼쪽으로 이동">
+            <button class="watchlist-scroll-button is-left${hasOverflow ? '' : ' is-disabled'}" type="button" data-watchlist-scroll="-1" aria-label="관심 그룹 왼쪽으로 이동" ${hasOverflow ? '' : 'disabled'}>
                 <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
             </button>
             <button id="watchlistManageButton" class="home-ranking-tab watchlist-manage-tab" type="button" title="관심 그룹 관리">
@@ -520,7 +522,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="watchlist-tabs-viewport">
                 <div class="watchlist-tabs-track">${tabs}</div>
             </div>
-            <button class="watchlist-scroll-button is-right" type="button" data-watchlist-scroll="1" aria-label="관심 그룹 오른쪽으로 이동">
+            <button class="watchlist-scroll-button is-right${hasOverflow ? '' : ' is-disabled'}" type="button" data-watchlist-scroll="1" aria-label="관심 그룹 오른쪽으로 이동" ${hasOverflow ? '' : 'disabled'}>
                 <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
             </button>
         `;

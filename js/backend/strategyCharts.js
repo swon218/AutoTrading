@@ -19,14 +19,17 @@ function getDefaultStartDate(years) {
 }
 
 function getBucketTime(time, intervalMinutes) {
-    const date = new Date(time);
-    const koreaMinutes = date.getUTCHours() * 60 + date.getUTCMinutes() + 9 * 60;
+    const match = String(time || '').match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+    if (!match) return time;
+
+    const [, datePart, hourText, minuteText] = match;
+    const koreaMinutes = Number(hourText) * 60 + Number(minuteText);
     const marketOpenMinutes = 9 * 60;
     const elapsed = Math.max(0, koreaMinutes - marketOpenMinutes);
     const bucketKoreaMinutes = marketOpenMinutes + Math.floor(elapsed / intervalMinutes) * intervalMinutes;
-    const diffMinutes = bucketKoreaMinutes - koreaMinutes;
-    date.setUTCMinutes(date.getUTCMinutes() + diffMinutes, 0, 0);
-    return date.toISOString();
+    const bucketHour = String(Math.floor(bucketKoreaMinutes / 60)).padStart(2, '0');
+    const bucketMinute = String(bucketKoreaMinutes % 60).padStart(2, '0');
+    return `${datePart}T${bucketHour}:${bucketMinute}:00+09:00`;
 }
 
 function aggregateCandles(candles, intervalMinutes) {

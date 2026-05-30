@@ -22,7 +22,25 @@ const {
 const { getHomeRanking } = require('./backend/rankings');
 const { getStockInfo, resolveStockCode, searchStocks } = require('./backend/stocks');
 const { subscribeRealtime } = require('./backend/realtime');
-const { getKiwoomCredentialsForRequest, saveUserApiCredentials } = require('./backend/userCredentials');
+const {
+    getKiwoomCredentialsForRequest,
+    getUserIntegrationStatus,
+    saveUserApiCredentials,
+} = require('./backend/userCredentials');
+const {
+    getAutoTradeRules,
+    saveAutoTradeRule,
+    updateAutoTradeRuleEnabled,
+} = require('./backend/autoTradeRules');
+const {
+    getAutoTradeEngineStatus,
+    startAutoTradeEngine,
+} = require('./backend/autoTradeEngine');
+const {
+    confirmTelegramVerification,
+    startTelegramVerification,
+    testTelegramConnection,
+} = require('./backend/telegram');
 const {
     createWatchlist,
     deleteWatchlist,
@@ -32,6 +50,12 @@ const {
 } = require('./backend/watchlists');
 
 const PORT = Number(process.env.PORT || 3000);
+
+function getRequestUrl(request) {
+    const host = request.headers.host || `localhost:${PORT}`;
+    const protocol = request.headers['x-forwarded-proto'] || 'http';
+    return new URL(request.url || '/', `${protocol}://${host}`);
+}
 
 function parseRequestBody(request) {
     return new Promise((resolve, reject) => {
@@ -71,7 +95,7 @@ function sendJson(response, statusCode, payload) {
 }
 
 function sendStatic(request, response) {
-    const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+    const requestUrl = getRequestUrl(request);
     const pathname = decodeURIComponent(requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname);
     const filePath = path.normalize(path.join(ROOT_DIR, pathname));
 
@@ -104,12 +128,15 @@ function sendStatic(request, response) {
 }
 
 const server = http.createServer(async (request, response) => {
-    const requestUrl = new URL(request.url, `http://${request.headers.host}`);
+    const requestUrl = getRequestUrl(request);
     const stockMatch = requestUrl.pathname.match(/^\/api\/stock\/(.+)$/);
     const chartMatch = requestUrl.pathname.match(/^\/api\/chart\/(.+)$/);
     const strategyChartMatch = requestUrl.pathname.match(/^\/api\/strategy-chart\/(.+)$/);
     const realtimeMatch = requestUrl.pathname.match(/^\/api\/realtime\/(.+)$/);
     const strategyMatch = requestUrl.pathname.match(/^\/api\/indicator-strategies\/([^/]+)$/);
+    const autoTradeRuleMatch = requestUrl.pathname.match(/^\/api\/auto-trade-rules\/([^/]+)$/);
+    const autoTradeRuleStartMatch = requestUrl.pathname.match(/^\/api\/auto-trade-rules\/([^/]+)\/start$/);
+    const autoTradeRuleStopMatch = requestUrl.pathname.match(/^\/api\/auto-trade-rules\/([^/]+)\/stop$/);
     const watchlistMatch = requestUrl.pathname.match(/^\/api\/watchlists\/([^/]+)$/);
     const watchlistQuotesMatch = requestUrl.pathname.match(/^\/api\/watchlists\/([^/]+)\/quotes$/);
 
@@ -209,6 +236,73 @@ const server = http.createServer(async (request, response) => {
         return;
     }
 
+    if (request.method === 'GET' && requestUrl.pathname === '/api/integration-status') {
+        try {
+            const status = await getUserIntegrationStatus(request, requestUrl);
+            sendJson(response, 200, status);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/telegram/test') {
+        try {
+            const result = await testTelegramConnection(request, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/telegram/verification/start') {
+        try {
+            const result = await startTelegramVerification(request, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/telegram/verification/confirm') {
+        try {
+            const payload = await parseRequestBody(request);
+            const result = await confirmTelegramVerification(request, payload, requestUrl);
+            sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/auto-trade-rules') {
+        try {
+            const rules = await getAutoTradeRules(request, requestUrl);
+            sendJson(response, 200, { rules });
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/auto-trade-engine/status') {
+        sendJson(response, 200, getAutoTradeEngineStatus());
+        return;
+    }
+
+    if (request.method === 'POST' && requestUrl.pathname === '/api/auto-trade-rules') {
+        try {
+            const payload = await parseRequestBody(request);
+            const rule = await saveAutoTradeRule(request, payload, requestUrl);
+            sendJson(response, 200, rule);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, { message: error.message });
+        }
+        return;
+    }
+
     if (request.method === 'GET' && requestUrl.pathname === '/api/account/orderable-cash') {
         try {
             const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
@@ -260,6 +354,26 @@ const server = http.createServer(async (request, response) => {
             const payload = await parseRequestBody(request);
             const result = await saveUserApiCredentials(request, payload);
             sendJson(response, 200, result);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && autoTradeRuleStartMatch) {
+        try {
+            const rule = await updateAutoTradeRuleEnabled(request, autoTradeRuleStartMatch[1], true, requestUrl);
+            sendJson(response, 200, rule);
+        } catch (error) {
+            sendJson(response, error.statusCode || 400, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'POST' && autoTradeRuleStopMatch) {
+        try {
+            const rule = await updateAutoTradeRuleEnabled(request, autoTradeRuleStopMatch[1], false, requestUrl);
+            sendJson(response, 200, rule);
         } catch (error) {
             sendJson(response, error.statusCode || 400, { message: error.message });
         }
@@ -412,6 +526,7 @@ const server = http.createServer(async (request, response) => {
 if (require.main === module) {
     server.listen(PORT, () => {
         console.log(`AutoTrading server: http://localhost:${PORT}`);
+        startAutoTradeEngine();
     });
 }
 

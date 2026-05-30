@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AutoTrading - 전략 설정</title>
+    <title>AutoTrading - 백테스팅</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=auto-trade-20260530-9">
 </head>
 <body class="h-screen flex flex-col overflow-hidden" data-default-panel="period" data-chart-mode="strategy" data-chart-source="postgres" data-default-chart-interval="15" data-chart-years="5" data-chart-limit="500">
 
@@ -110,9 +110,9 @@
                     <i class="fa-solid fa-chart-line text-lg w-6 text-center"></i>
                     <span class="font-medium hidden md:block">트레이딩 대시보드</span>
                 </a>
-                <a href="strategy.html" class="flex items-center space-x-3 text-emerald-400 bg-slate-700/50 p-3 rounded-lg transition-colors">
+                <a href="backtesting.html" class="flex items-center space-x-3 text-emerald-400 bg-slate-700/50 p-3 rounded-lg transition-colors" aria-current="page">
                     <i class="fa-solid fa-diagram-project text-lg w-6 text-center"></i>
-                    <span class="font-medium hidden md:block">전략 설정</span>
+                    <span class="font-medium hidden md:block">백테스팅</span>
                 </a>
                 <a href="news.html" class="flex items-center space-x-3 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors">
                     <i class="fa-solid fa-newspaper text-lg w-6 text-center"></i>
@@ -175,7 +175,7 @@
                             <button id="chartZoomIn" type="button" title="차트 확대">+</button>
                             <button id="chartZoomOut" type="button" title="차트 축소">-</button>
                         </div>
-                        <div id="chartStatus" class="chart-status">전략 설정용 차트 영역입니다.</div>
+                        <div id="chartStatus" class="chart-status">백테스팅용 차트 영역입니다.</div>
                     </div>
                 </section>
             </div>
@@ -282,7 +282,7 @@
         </aside>
     </div>
 
-    <script type="module" src="js/authModal.js"></script>
-    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/frontend/authModal.js?v=auto-trade-20260530-12"></script>
+    <script type="module" src="js/pages/backtesting.js?v=auto-trade-20260530-12"></script>
 </body>
 </html>

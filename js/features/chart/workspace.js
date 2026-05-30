@@ -1,12 +1,19 @@
-﻿import { drawStockChart } from './chartRenderer.js';
+import { drawStockChart } from '../../frontend/chartRenderer.js';
 import {
     getIndicatorDefinition,
     indicatorDefinitions,
     normalizeIndicatorValues,
-} from './indicators/registry.js';
-import { authFetch, createAuthenticatedEventSource } from './apiClient.js';
+} from '../../indicators/registry.js';
+import { authFetch, createAuthenticatedEventSource } from '../../frontend/apiClient.js';
+import { formatNumber } from './format.js';
+import {
+    cloneIndicatorFromDefinition,
+    dedupeIndicatorsByKey,
+    normalizeStrategyName,
+} from '../strategies/strategyUtils.js';
+import { buildAutoTradeRulePayload } from '../autoTrade/rulePayload.js';
 
-document.addEventListener('DOMContentLoaded', () => {
+export function initChartWorkspace() {
     const mainWrap = document.querySelector('.main_m');
     const mainTop = document.querySelector('.main_a');
     const mainBottom = document.querySelector('.main_b');
@@ -130,12 +137,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const pendingOrdersList = document.getElementById('pendingOrdersList');
     const orderMessage = document.getElementById('orderMessage');
     const orderSubmitButton = document.getElementById('orderSubmitButton');
+    const orderModeButtons = document.querySelectorAll('[data-order-mode]');
+    const orderModePanels = document.querySelectorAll('[data-order-mode-panel]');
+    const autoTradeForm = document.getElementById('autoTradeForm');
+    const autoTradeStrategySelect = document.getElementById('autoTradeStrategySelect');
+    const autoTradeCashInput = document.getElementById('autoTradeCashInput');
+    const autoTradeMaxPriceInput = document.getElementById('autoTradeMaxPriceInput');
+    const autoTradeMinPriceInput = document.getElementById('autoTradeMinPriceInput');
+    const autoTradeQuantityInput = document.getElementById('autoTradeQuantityInput');
+    const autoTradePriceRangeCheckbox = document.getElementById('autoTradePriceRangeCheckbox');
+    const autoTradeSignalGuardCheckbox = document.getElementById('autoTradeSignalGuardCheckbox');
+    const autoTradeTelegramStatus = document.getElementById('autoTradeTelegramStatus');
+    const autoTradeTelegramStatusText = document.getElementById('autoTradeTelegramStatusText');
+    const autoTradeTelegramVerifyButton = document.getElementById('autoTradeTelegramVerifyButton');
+    const autoTradeTelegramCodeRow = document.getElementById('autoTradeTelegramCodeRow');
+    const autoTradeTelegramCodeInput = document.getElementById('autoTradeTelegramCodeInput');
+    const autoTradeTelegramConfirmButton = document.getElementById('autoTradeTelegramConfirmButton');
+    const autoTradeSubmitButton = document.getElementById('autoTradeSubmitButton');
+    const autoTradeMessage = document.getElementById('autoTradeMessage');
+    const telegramHelpButton = document.getElementById('telegramHelpButton');
+    const telegramHelpModal = document.getElementById('telegramHelpModal');
+    const telegramHelpCloseButton = document.getElementById('telegramHelpCloseButton');
 
     let currentStockCode = '';
     let refreshTimer = null;
     let searchTimer = null;
     let latestResults = [];
     let activeSearchIndex = -1;
+    let activeIndicatorSearchIndex = -1;
     const SEARCH_DRAFT_STORAGE_KEY = 'autotrading.stockSearchDraft';
     const isStaticStrategyChart = document.body.dataset.chartMode === 'strategy';
     const chartDataSource = document.body.dataset.chartSource || 'kiwoom';
@@ -168,41 +197,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let activeIndicators = [];
     let savedIndicatorStrategies = [];
     let currentOrderAction = 'buy';
+    let currentOrderMode = 'manual';
     let currentOrderPriceMode = 'limit';
     let latestStockPrice = 0;
     let orderMessageTimer = null;
+    let autoTradeMessageTimer = null;
+    let isTelegramConfigured = false;
     let hasUserEditedOrderPrice = false;
     let orderableCashTimer = null;
     let pendingOrdersTimer = null;
     let latestSellableQuantity = 0;
     let holdingRequestId = 0;
 
-    const formatNumber = (value) => {
-        if (value === null || value === undefined || Number.isNaN(Number(value))) {
-            return '-';
-        }
-        return Number(value).toLocaleString('ko-KR');
-    };
-
-    const cloneIndicatorFromDefinition = (definition) => {
-        return {
-            id: `${definition.key}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            key: definition.key,
-            values: Object.fromEntries(definition.fields.map((field) => [field.key, field.value])),
-        };
-    };
-
     const isIndicatorActive = (key) => {
         return activeIndicators.some((indicator) => indicator.key === key);
-    };
-
-    const dedupeIndicatorsByKey = (indicators = []) => {
-        const seenKeys = new Set();
-        return indicators.filter((indicator) => {
-            if (!indicator?.key || seenKeys.has(indicator.key)) return false;
-            seenKeys.add(indicator.key);
-            return true;
-        });
     };
 
     const setRightPanel = (panelName = 'indicator') => {
@@ -450,6 +458,53 @@ document.addEventListener('DOMContentLoaded', () => {
             }, options.autoHide);
         }
     };
+
+    const setAutoTradeMessage = (message = '', type = '', options = {}) => {
+        if (!autoTradeMessage) return;
+        if (autoTradeMessageTimer) {
+            clearTimeout(autoTradeMessageTimer);
+            autoTradeMessageTimer = null;
+        }
+        autoTradeMessage.textContent = message;
+        autoTradeMessage.classList.toggle('is-error', type === 'error');
+        autoTradeMessage.classList.toggle('is-success', type === 'success');
+        if (message && options.autoHide) {
+            autoTradeMessageTimer = setTimeout(() => {
+                setAutoTradeMessage('');
+            }, options.autoHide);
+        }
+    };
+
+    const setOrderMode = (mode = 'manual') => {
+        currentOrderMode = mode === 'auto' ? 'auto' : 'manual';
+        orderModeButtons.forEach((button) => {
+            button.classList.toggle('is-active', button.dataset.orderMode === currentOrderMode);
+        });
+        orderModePanels.forEach((panel) => {
+            panel.classList.toggle('hidden', panel.dataset.orderModePanel !== currentOrderMode);
+        });
+        if (currentOrderMode === 'auto') {
+            loadAutoTradePanel();
+        }
+    };
+
+    const updateAutoTradeSubmitState = () => {
+        if (!autoTradeSubmitButton) return;
+        autoTradeSubmitButton.disabled = !autoTradePriceRangeCheckbox?.checked
+            || !autoTradeSignalGuardCheckbox?.checked;
+    };
+
+    function openTelegramHelp() {
+        if (!telegramHelpModal) return;
+        telegramHelpModal.classList.remove('hidden');
+        telegramHelpCloseButton?.focus();
+    }
+
+    function closeTelegramHelp() {
+        if (!telegramHelpModal) return;
+        telegramHelpModal.classList.add('hidden');
+        telegramHelpButton?.focus();
+    }
 
     const renderPendingOrders = (orders = []) => {
         if (!pendingOrdersList) return;
@@ -706,9 +761,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const changeOrderInputValue = (target, delta) => {
-        const input = target === 'quantity' ? orderQuantityInput : orderPriceInput;
+        const input = target === 'autoQuantity'
+            ? autoTradeQuantityInput
+            : target === 'quantity' ? orderQuantityInput : orderPriceInput;
         if (!input || input.disabled) return;
-        const step = target === 'quantity' ? 1 : getOrderPriceStep();
+        const step = target === 'quantity' || target === 'autoQuantity' ? 1 : getOrderPriceStep();
         let nextValue = Math.max(0, parseOrderNumber(input.value) + (Number(delta) || 0) * step);
         if (target === 'quantity' && currentOrderAction === 'sell' && latestSellableQuantity > 0) {
             nextValue = Math.min(nextValue, latestSellableQuantity);
@@ -824,6 +881,16 @@ document.addEventListener('DOMContentLoaded', () => {
         updateOrderTotal();
     });
 
+    autoTradeQuantityInput?.addEventListener('input', () => {
+        sanitizeOrderNumberInput(autoTradeQuantityInput);
+    });
+
+    autoTradeQuantityInput?.addEventListener('beforeinput', allowOnlyOrderDigits);
+
+    autoTradeQuantityInput?.addEventListener('blur', () => {
+        formatOrderInputValue(autoTradeQuantityInput);
+    });
+
     pendingOrdersList?.addEventListener('beforeinput', (event) => {
         if (event.target.matches('[data-pending-price], [data-pending-quantity]')) {
             allowOnlyOrderDigits(event);
@@ -933,6 +1000,42 @@ document.addEventListener('DOMContentLoaded', () => {
         submitStockOrder();
     });
 
+    orderModeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            setOrderMode(button.dataset.orderMode);
+        });
+    });
+
+    autoTradeForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        submitAutoTradeRule();
+    });
+    autoTradePriceRangeCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
+    autoTradeSignalGuardCheckbox?.addEventListener('change', updateAutoTradeSubmitState);
+    autoTradeTelegramVerifyButton?.addEventListener('click', verifyTelegramConnection);
+    autoTradeTelegramConfirmButton?.addEventListener('click', confirmTelegramConnection);
+    autoTradeTelegramCodeInput?.addEventListener('input', () => {
+        autoTradeTelegramCodeInput.value = autoTradeTelegramCodeInput.value.replace(/[^\d]/g, '').slice(0, 6);
+    });
+    autoTradeTelegramCodeInput?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            confirmTelegramConnection();
+        }
+    });
+    telegramHelpButton?.addEventListener('click', openTelegramHelp);
+    telegramHelpCloseButton?.addEventListener('click', closeTelegramHelp);
+    telegramHelpModal?.addEventListener('click', (event) => {
+        if (event.target === telegramHelpModal) {
+            closeTelegramHelp();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && telegramHelpModal && !telegramHelpModal.classList.contains('hidden')) {
+            closeTelegramHelp();
+        }
+    });
+
     const getIndicatorFieldValue = (indicator, field) => {
         const values = normalizeIndicatorValues(indicator.key, indicator.values);
         return values[field.key] ?? field.value;
@@ -1021,8 +1124,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return String(strategyNameInput?.value || '').trim();
     };
 
-    const normalizeStrategyName = (value) => String(value || '').replace(/\s+/g, '').toLowerCase();
-
     const isDuplicateStrategyName = (name, currentId = '') => {
         const normalized = normalizeStrategyName(name);
         return savedIndicatorStrategies.some((strategy) => {
@@ -1042,17 +1143,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const hideIndicatorDropdown = () => {
+        activeIndicatorSearchIndex = -1;
         indicatorSearchDropdown?.classList.add('hidden');
+        indicatorSearchInput?.setAttribute('aria-expanded', 'false');
     };
 
     const renderIndicatorDropdown = () => {
         if (!indicatorSearchDropdown) return;
 
         const matches = getMatchingIndicatorDefinitions(indicatorSearchInput?.value);
+        activeIndicatorSearchIndex = matches.length ? 0 : -1;
         indicatorSearchDropdown.innerHTML = matches.length
-            ? matches.map((definition) => {
+            ? matches.map((definition, index) => {
+                const activeClass = index === activeIndicatorSearchIndex ? ' is-active' : '';
+                const selected = index === activeIndicatorSearchIndex ? 'true' : 'false';
                 return `
-                    <button type="button" class="indicator-search-option" data-indicator-key="${definition.key}">
+                    <button type="button" class="indicator-search-option${activeClass}" data-indicator-key="${definition.key}" aria-selected="${selected}">
                         <strong>${definition.name}</strong>
                         <span>${definition.description}</span>
                     </button>
@@ -1061,6 +1167,248 @@ document.addEventListener('DOMContentLoaded', () => {
             : '<div class="indicator-empty">추가할 보조지표가 없습니다.</div>';
 
         indicatorSearchDropdown.classList.remove('hidden');
+        indicatorSearchInput?.setAttribute('aria-expanded', 'true');
+    };
+
+    const getIndicatorSearchOptions = () => {
+        return Array.from(indicatorSearchDropdown?.querySelectorAll('[data-indicator-key]') || []);
+    };
+
+    const updateActiveIndicatorSearchOption = () => {
+        const options = getIndicatorSearchOptions();
+        options.forEach((option, index) => {
+            const isActive = index === activeIndicatorSearchIndex;
+            option.classList.toggle('is-active', isActive);
+            option.setAttribute('aria-selected', String(isActive));
+            if (isActive) {
+                option.scrollIntoView({ block: 'nearest' });
+            }
+        });
+    };
+
+    const renderAutoTradeStrategyOptions = () => {
+        if (!autoTradeStrategySelect) return;
+        autoTradeStrategySelect.innerHTML = '<option value="">전략 선택</option>';
+        savedIndicatorStrategies.forEach((strategy) => {
+            const option = document.createElement('option');
+            option.value = strategy.id;
+            option.textContent = strategy.name;
+            autoTradeStrategySelect.appendChild(option);
+        });
+    };
+
+    const fetchAutoTradeCash = async () => {
+        if (!autoTradeCashInput) return;
+        autoTradeCashInput.value = '조회 중...';
+        try {
+            const response = await authFetch('/api/account/orderable-cash', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            autoTradeCashInput.value = `${formatNumber(Number(payload.orderableAmount) || 0)}원`;
+        } catch (error) {
+            console.error('Auto trade cash request failed.', error);
+            autoTradeCashInput.value = '계좌 조회 실패';
+        }
+    };
+
+    const fetchIntegrationStatus = async () => {
+        if (!autoTradeTelegramStatus) return;
+        const setTelegramStatusText = (message) => {
+            if (autoTradeTelegramStatusText) {
+                autoTradeTelegramStatusText.textContent = message;
+            } else {
+                autoTradeTelegramStatus.textContent = message;
+            }
+        };
+        const setTelegramStatusClass = (status) => {
+            autoTradeTelegramStatus.classList.toggle('is-error', status === 'missing');
+            autoTradeTelegramStatus.classList.toggle('is-warning', status === 'needs-verification');
+            autoTradeTelegramVerifyButton?.classList.toggle('hidden', status !== 'needs-verification');
+            autoTradeTelegramCodeRow?.classList.add('hidden');
+        };
+
+        setTelegramStatusText('텔레그램 연동 상태를 확인 중입니다.');
+        setTelegramStatusClass('missing');
+        try {
+            const response = await authFetch('/api/integration-status', { cache: 'no-store' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            const isConfigured = Boolean(payload.telegramConfigured);
+            const isVerified = Boolean(payload.telegramVerified);
+            isTelegramConfigured = isConfigured && isVerified;
+            if (!isConfigured) {
+                setTelegramStatusText('텔레그램 봇 토큰과 Chat ID가 필요합니다. 회원정보수정에서 입력하세요.');
+                setTelegramStatusClass('missing');
+            } else if (!isVerified) {
+                setTelegramStatusText('텔레그램 인증 필요');
+                setTelegramStatusClass('needs-verification');
+            } else {
+                setTelegramStatusText('텔레그램 연동 완료');
+                setTelegramStatusClass('verified');
+            }
+        } catch (error) {
+            console.error('Integration status request failed.', error);
+            isTelegramConfigured = false;
+            setTelegramStatusText('연동 상태를 확인하지 못했습니다.');
+            setTelegramStatusClass('missing');
+        }
+    };
+
+    async function verifyTelegramConnection() {
+        if (!autoTradeTelegramVerifyButton) return;
+        autoTradeTelegramVerifyButton.disabled = true;
+        autoTradeTelegramVerifyButton.textContent = '인증 중';
+        setAutoTradeMessage('텔레그램 인증코드를 보내는 중입니다...');
+        try {
+            const response = await authFetch('/api/telegram/test', {
+                method: 'POST',
+                cache: 'no-store',
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            autoTradeTelegramCodeRow?.classList.remove('hidden');
+            autoTradeTelegramCodeInput.value = '';
+            autoTradeTelegramCodeInput?.focus();
+            setAutoTradeMessage('텔레그램으로 받은 6자리 인증코드를 입력하세요.', 'success');
+        } catch (error) {
+            setAutoTradeMessage(error.message || '텔레그램 인증코드 발송에 실패했습니다.', 'error');
+        } finally {
+            autoTradeTelegramVerifyButton.disabled = false;
+            autoTradeTelegramVerifyButton.textContent = '인증하기';
+        }
+    }
+
+    async function confirmTelegramConnection() {
+        if (!autoTradeTelegramConfirmButton) return;
+        const code = String(autoTradeTelegramCodeInput?.value || '').replace(/[^\d]/g, '');
+        if (!/^\d{6}$/.test(code)) {
+            setAutoTradeMessage('6자리 인증코드를 입력하세요.', 'error');
+            return;
+        }
+
+        autoTradeTelegramConfirmButton.disabled = true;
+        setAutoTradeMessage('텔레그램 인증코드를 확인하는 중입니다...');
+        try {
+            const response = await authFetch('/api/telegram/verification/confirm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify({ code }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
+            autoTradeTelegramCodeRow?.classList.add('hidden');
+            setAutoTradeMessage('텔레그램 인증이 완료되었습니다.', 'success');
+            await fetchIntegrationStatus();
+        } catch (error) {
+            setAutoTradeMessage(error.message || '텔레그램 인증에 실패했습니다.', 'error');
+        } finally {
+            autoTradeTelegramConfirmButton.disabled = false;
+        }
+    }
+
+    const loadAutoTradePanel = async () => {
+        if (!savedIndicatorStrategies.length) {
+            savedIndicatorStrategies = await loadSavedIndicatorStrategies();
+            renderSavedStrategyOptions();
+        }
+        renderAutoTradeStrategyOptions();
+        fetchAutoTradeCash();
+        fetchIntegrationStatus();
+        updateAutoTradeSubmitState();
+    };
+
+    const submitAutoTradeRule = async () => {
+        if (!currentStockCode) {
+            setAutoTradeMessage('먼저 종목을 검색해서 선택하세요.', 'error');
+            return;
+        }
+        if (!isTelegramConfigured) {
+            setAutoTradeMessage('텔레그램 봇 토큰과 Chat ID를 먼저 저장하세요.', 'error');
+            return;
+        }
+
+        const strategyId = autoTradeStrategySelect?.value || '';
+        const payload = buildAutoTradeRulePayload({
+            currentStockCode,
+            stockName: stockEls.name?.textContent || '',
+            strategyId,
+            maxBuyPrice: parseOrderNumber(autoTradeMaxPriceInput?.value),
+            minBuyPrice: parseOrderNumber(autoTradeMinPriceInput?.value),
+            orderQuantity: parseOrderNumber(autoTradeQuantityInput?.value),
+            priceRangeAgreed: Boolean(autoTradePriceRangeCheckbox?.checked),
+            signalGuardAgreed: Boolean(autoTradeSignalGuardCheckbox?.checked),
+        });
+
+        autoTradeSubmitButton.disabled = true;
+        setAutoTradeMessage('자동매매 설정을 저장하는 중입니다...');
+        try {
+            const response = await authFetch('/api/auto-trade-rules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=utf-8' },
+                body: JSON.stringify(payload),
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(result.message || `HTTP ${response.status}`);
+            setAutoTradeMessage('자동매매 설정을 저장했습니다. 서버가 켜져 있는 동안 조건을 감시합니다.', 'success');
+        } catch (error) {
+            setAutoTradeMessage(error.message || '자동매매 설정 저장에 실패했습니다.', 'error');
+        } finally {
+            updateAutoTradeSubmitState();
+        }
+    };
+
+    const moveActiveIndicatorSearchOption = (direction) => {
+        const options = getIndicatorSearchOptions();
+        if (!options.length) return;
+        activeIndicatorSearchIndex = activeIndicatorSearchIndex < 0 ? 0 : activeIndicatorSearchIndex;
+        activeIndicatorSearchIndex = (activeIndicatorSearchIndex + direction + options.length) % options.length;
+        updateActiveIndicatorSearchOption();
+    };
+
+    const addActiveIndicatorSearchOption = () => {
+        const options = getIndicatorSearchOptions();
+        const option = options[activeIndicatorSearchIndex];
+        if (!option) {
+            addIndicatorByQuery();
+            return;
+        }
+        addIndicatorByKey(option.dataset.indicatorKey);
+    };
+
+    const isIndicatorDropdownOpen = () => {
+        return Boolean(indicatorSearchDropdown && !indicatorSearchDropdown.classList.contains('hidden'));
+    };
+
+    const handleIndicatorSearchNavigationKey = (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (!isIndicatorDropdownOpen() || !getIndicatorSearchOptions().length) {
+                renderIndicatorDropdown();
+            }
+            moveActiveIndicatorSearchOption(1);
+            return true;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (!isIndicatorDropdownOpen() || !getIndicatorSearchOptions().length) {
+                renderIndicatorDropdown();
+            }
+            moveActiveIndicatorSearchOption(-1);
+            return true;
+        }
+
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            addActiveIndicatorSearchOption();
+            return true;
+        }
+
+        return false;
+    };
+
+    const shouldHandleIndicatorSearchNavigation = () => {
+        return document.activeElement === indicatorSearchInput || isIndicatorDropdownOpen();
     };
 
     const findIndicatorDefinition = (query) => {
@@ -1209,10 +1557,16 @@ document.addEventListener('DOMContentLoaded', () => {
         indicatorAddButton?.addEventListener('click', addIndicatorByQuery);
         indicatorSearchInput?.addEventListener('focus', renderIndicatorDropdown);
         indicatorSearchInput?.addEventListener('input', renderIndicatorDropdown);
+        document.addEventListener('keydown', (event) => {
+            if (!shouldHandleIndicatorSearchNavigation()) return;
+            if (handleIndicatorSearchNavigationKey(event)) {
+                event.indicatorSearchHandled = true;
+                event.stopPropagation();
+            }
+        }, true);
         indicatorSearchInput?.addEventListener('keydown', (event) => {
-            if (event.key !== 'Enter') return;
-            event.preventDefault();
-            addIndicatorByQuery();
+            if (event.indicatorSearchHandled) return;
+            handleIndicatorSearchNavigationKey(event);
         });
 
         indicatorSearchDropdown?.addEventListener('mousedown', (event) => {
@@ -1220,6 +1574,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const option = event.target.closest('[data-indicator-key]');
             if (!option) return;
             addIndicatorByKey(option.dataset.indicatorKey);
+        });
+
+        indicatorSearchDropdown?.addEventListener('mouseover', (event) => {
+            const option = event.target.closest('[data-indicator-key]');
+            if (!option) return;
+            const options = getIndicatorSearchOptions();
+            activeIndicatorSearchIndex = options.indexOf(option);
+            updateActiveIndicatorSearchOption();
         });
 
         document.addEventListener('click', (event) => {
@@ -2539,4 +2901,4 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
         loadDefaultRankingStock();
     }
-});
+}

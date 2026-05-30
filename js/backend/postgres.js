@@ -122,9 +122,17 @@ async function getCandles15m(stockCode, startDate = null, endDate = null, limit 
     return result.rows;
 }
 
+function toKoreaTimeString(value) {
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+
+    const koreaTime = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+    return koreaTime.toISOString().replace('Z', '+09:00');
+}
+
 function rowToCandle(row) {
     return {
-        time: new Date(row.candle_time).toISOString(),
+        time: toKoreaTimeString(row.candle_time),
         open: Number(row.open_price),
         high: Number(row.high_price),
         low: Number(row.low_price),
