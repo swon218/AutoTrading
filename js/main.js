@@ -1270,7 +1270,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    const confirmTelegramConnection = async () => {
+    async function confirmTelegramConnection() {
         if (!autoTradeTelegramConfirmButton) return;
         const code = String(autoTradeTelegramCodeInput?.value || '').replace(/[^\d]/g, '');
         if (!/^\d{6}$/.test(code)) {
@@ -1296,7 +1296,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             autoTradeTelegramConfirmButton.disabled = false;
         }
-    };
+    }
 
     const loadAutoTradePanel = async () => {
         if (!savedIndicatorStrategies.length) {
