@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://apart-carter-assigned-archives.trycloudflare.com/api/:path*"
+      "destination": "https://collection-empire-consultation-kevin.trycloudflare.com/api/:path*"
     }
   ]
 }
