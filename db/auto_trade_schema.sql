@@ -4,6 +4,9 @@
 ALTER TABLE public.user_api_credentials
     ADD COLUMN IF NOT EXISTS telegram_chat_id_encrypted TEXT;
 
+ALTER TABLE public.user_api_credentials
+    ADD COLUMN IF NOT EXISTS telegram_verified_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS public.auto_trade_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,

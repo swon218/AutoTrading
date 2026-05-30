@@ -145,6 +145,7 @@ async function saveUserApiCredentials(request, payload) {
         telegram_chat_id_encrypted: payload.telegramChatId?.trim()
             ? encryptSecret(payload.telegramChatId.trim(), config.encryptionKey)
             : null,
+        telegram_verified_at: null,
         updated_at: new Date().toISOString(),
     };
 
@@ -164,7 +165,7 @@ async function saveUserApiCredentials(request, payload) {
 
 async function getUserApiCredentialRow(userId, config) {
     const rows = await requestSupabaseJson(
-        `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(userId)}&select=kiwoom_app_key_encrypted,kiwoom_secret_key_encrypted,telegram_bot_token_encrypted,telegram_chat_id_encrypted&limit=1`,
+        `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(userId)}&select=kiwoom_app_key_encrypted,kiwoom_secret_key_encrypted,telegram_bot_token_encrypted,telegram_chat_id_encrypted,telegram_verified_at&limit=1`,
         {
             headers: {
                 apikey: config.serviceKey,
@@ -229,6 +230,7 @@ async function getUserIntegrationStatus(request, requestUrl = null) {
     return {
         kiwoomConfigured: Boolean(row?.kiwoom_app_key_encrypted && row?.kiwoom_secret_key_encrypted),
         telegramConfigured: Boolean(row?.telegram_bot_token_encrypted && row?.telegram_chat_id_encrypted),
+        telegramVerified: Boolean(row?.telegram_bot_token_encrypted && row?.telegram_chat_id_encrypted && row?.telegram_verified_at),
     };
 }
 

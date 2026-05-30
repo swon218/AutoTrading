@@ -1,4 +1,9 @@
-const { getKiwoomCredentialsForRequest } = require('./userCredentials');
+const {
+    getAuthenticatedSupabaseUser,
+    getBackendSupabaseConfig,
+    getKiwoomCredentialsForRequest,
+    requestSupabaseJson,
+} = require('./userCredentials');
 
 async function sendTelegramMessage(botToken, chatId, text) {
     if (!botToken || !chatId) {
@@ -29,6 +34,8 @@ async function sendTelegramMessage(botToken, chatId, text) {
 }
 
 async function testTelegramConnection(request, requestUrl = null) {
+    const config = getBackendSupabaseConfig();
+    const user = await getAuthenticatedSupabaseUser(request, requestUrl);
     const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
     if (!credentials.telegramBotToken || !credentials.telegramChatId) {
         const error = new Error('Telegram bot token and chat ID are not registered.');
@@ -39,7 +46,23 @@ async function testTelegramConnection(request, requestUrl = null) {
     await sendTelegramMessage(
         credentials.telegramBotToken,
         credentials.telegramChatId,
-        'AutoTrading 텔레그램 연동 테스트 메시지입니다.',
+        'AutoTrading 텔레그램 연동 인증 메시지입니다.',
+    );
+
+    await requestSupabaseJson(
+        `${config.url}/rest/v1/user_api_credentials?user_id=eq.${encodeURIComponent(user.id)}`,
+        {
+            method: 'PATCH',
+            headers: {
+                apikey: config.serviceKey,
+                Authorization: `Bearer ${config.serviceKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                telegram_verified_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }),
+        },
     );
 
     return { ok: true };

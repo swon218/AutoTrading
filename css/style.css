@@ -1254,6 +1254,29 @@ body.overflow-hidden {
     box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
 }
 
+.auto-trade-status.is-warning .auto-trade-status-dot {
+    background-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.16);
+}
+
+.auto-trade-verify-button {
+    flex: 0 0 auto;
+    margin-left: auto;
+    border: 1px solid rgba(245, 158, 11, 0.48);
+    border-radius: 0.35rem;
+    padding: 0.2rem 0.45rem;
+    background-color: rgba(245, 158, 11, 0.13);
+    color: #fef3c7;
+    font-size: 0.68rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.auto-trade-verify-button:hover {
+    border-color: rgba(245, 158, 11, 0.7);
+    background-color: rgba(245, 158, 11, 0.22);
+}
+
 .order-field,
 .order-control-row {
     display: grid;

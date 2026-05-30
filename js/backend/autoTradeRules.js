@@ -125,6 +125,11 @@ async function saveAutoTradeRule(request, payload, requestUrl = null) {
         error.statusCode = 403;
         throw error;
     }
+    if (!integrations.telegramVerified) {
+        const error = new Error('텔레그램 인증을 완료해야 자동매매를 사용할 수 있습니다.');
+        error.statusCode = 403;
+        throw error;
+    }
     if (!integrations.kiwoomConfigured) {
         const error = new Error('키움 API 키를 먼저 저장해야 자동매매를 사용할 수 있습니다.');
         error.statusCode = 403;
