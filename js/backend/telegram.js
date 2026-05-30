@@ -28,8 +28,17 @@ function generateVerificationCode() {
     return String(crypto.randomInt(0, 1_000_000)).padStart(6, '0');
 }
 
+function normalizeTelegramBotToken(value) {
+    const text = String(value || '')
+        .replace(/\uFF1A/g, ':')
+        .replace(/[\u200B-\u200D\uFEFF\s]/g, '')
+        .trim();
+    const match = text.match(/\d{6,}:[A-Za-z0-9_-]{20,}/);
+    return match ? match[0] : text;
+}
+
 async function sendTelegramMessage(botToken, chatId, text) {
-    const normalizedBotToken = String(botToken || '').trim();
+    const normalizedBotToken = normalizeTelegramBotToken(botToken);
     const normalizedChatId = String(chatId || '').trim();
 
     if (!normalizedBotToken || !normalizedChatId) {
@@ -37,7 +46,7 @@ async function sendTelegramMessage(botToken, chatId, text) {
         error.statusCode = 400;
         throw error;
     }
-    if (!/^\d+:[A-Za-z0-9_-]+$/.test(normalizedBotToken)) {
+    if (!/^\d{6,}:[A-Za-z0-9_-]{20,}$/.test(normalizedBotToken)) {
         const error = new Error('텔레그램 봇 토큰 형식이 올바르지 않습니다. BotFather에서 받은 전체 토큰을 입력하세요.');
         error.statusCode = 400;
         throw error;

@@ -55,6 +55,15 @@ function encryptSecret(value, rawKey) {
     ].join(':');
 }
 
+function normalizeTelegramBotToken(value) {
+    const text = String(value || '')
+        .replace(/\uFF1A/g, ':')
+        .replace(/[\u200B-\u200D\uFEFF\s]/g, '')
+        .trim();
+    const match = text.match(/\d{6,}:[A-Za-z0-9_-]{20,}/);
+    return match ? match[0] : text;
+}
+
 function decryptSecret(value, rawKey) {
     if (!value) return '';
 
@@ -134,13 +143,14 @@ async function saveUserApiCredentials(request, payload) {
     const config = getBackendSupabaseConfig();
     const accessToken = getAuthorizationToken(request);
     const user = await getSupabaseUser(accessToken, config);
+    const telegramBotToken = normalizeTelegramBotToken(payload.telegramBotToken);
 
     const row = {
         user_id: user.id,
         kiwoom_app_key_encrypted: encryptSecret(payload.kiwoomAppKey.trim(), config.encryptionKey),
         kiwoom_secret_key_encrypted: encryptSecret(payload.kiwoomSecretKey.trim(), config.encryptionKey),
-        telegram_bot_token_encrypted: payload.telegramBotToken?.trim()
-            ? encryptSecret(payload.telegramBotToken.trim(), config.encryptionKey)
+        telegram_bot_token_encrypted: telegramBotToken
+            ? encryptSecret(telegramBotToken, config.encryptionKey)
             : null,
         telegram_chat_id_encrypted: payload.telegramChatId?.trim()
             ? encryptSecret(payload.telegramChatId.trim(), config.encryptionKey)
