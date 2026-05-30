@@ -1232,7 +1232,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const verifyTelegramConnection = async () => {
+    async function verifyTelegramConnection() {
         if (!autoTradeTelegramVerifyButton) return;
         autoTradeTelegramVerifyButton.disabled = true;
         autoTradeTelegramVerifyButton.textContent = '인증 중';
@@ -1252,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             autoTradeTelegramVerifyButton.disabled = false;
             autoTradeTelegramVerifyButton.textContent = '인증하기';
         }
-    };
+    }
 
     const loadAutoTradePanel = async () => {
         if (!savedIndicatorStrategies.length) {
