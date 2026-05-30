@@ -359,6 +359,7 @@
                         <div id="autoTradeTelegramStatus" class="auto-trade-status is-error">
                             <span class="auto-trade-status-dot" aria-hidden="true"></span>
                             <span id="autoTradeTelegramStatusText">텔레그램 봇 토큰과 Chat ID를 저장해야 자동매매를 사용할 수 있습니다. 회원정보수정에서 입력하세요.</span>
+                            <button id="telegramHelpButton" type="button" class="telegram-help-button" aria-label="텔레그램 연결 방법 보기">!</button>
                             <button id="autoTradeTelegramVerifyButton" type="button" class="auto-trade-verify-button hidden">인증하기</button>
                         </div>
                         <div id="autoTradeTelegramCodeRow" class="auto-trade-code-row hidden">
@@ -384,7 +385,43 @@
 
     </div>
 
-    <script type="module" src="js/authModal.js?v=auto-trade-20260530-11"></script>
-    <script type="module" src="js/main.js?v=auto-trade-20260530-11"></script>
+    <div id="telegramHelpModal" class="telegram-help-modal hidden" role="dialog" aria-modal="true" aria-labelledby="telegramHelpTitle">
+        <div class="telegram-help-card">
+            <div class="telegram-help-head">
+                <h2 id="telegramHelpTitle">텔레그램 알림 연결 방법</h2>
+                <button id="telegramHelpCloseButton" type="button" aria-label="설명창 닫기">
+                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                </button>
+            </div>
+            <div class="telegram-help-body">
+                <ol>
+                    <li>
+                        <strong>BotFather에서 봇 만들기</strong>
+                        <span>텔레그램에서 BotFather를 검색하고 <code>/newbot</code>을 입력한 뒤 봇 이름과 사용자명을 정하세요.</span>
+                    </li>
+                    <li>
+                        <strong>봇 토큰 복사</strong>
+                        <span>BotFather가 보내준 <code>123456789:AA...</code> 형태의 토큰을 회원정보수정의 텔레그램 봇 API 키에 입력하세요.</span>
+                    </li>
+                    <li>
+                        <strong>내 봇에게 /start 보내기</strong>
+                        <span>만든 봇 채팅방으로 들어가 <code>/start</code>를 한 번 보내야 Chat ID를 조회할 수 있습니다.</span>
+                    </li>
+                    <li>
+                        <strong>Chat ID 확인</strong>
+                        <span>브라우저에서 <code>https://api.telegram.org/bot[봇토큰]/getUpdates</code>를 열고 <code>"chat":{"id":...}</code>의 id 값을 복사하세요.</span>
+                    </li>
+                    <li>
+                        <strong>저장 후 인증</strong>
+                        <span>회원정보수정에 봇 토큰과 Chat ID를 저장한 뒤 자동매매 탭에서 인증하기를 눌러 6자리 코드를 입력하세요.</span>
+                    </li>
+                </ol>
+                <p>봇 토큰은 비밀번호처럼 보관하세요. Chat ID가 나오지 않으면 봇에게 <code>/start</code>를 먼저 보냈는지 확인하세요.</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/authModal.js?v=auto-trade-20260530-12"></script>
+    <script type="module" src="js/main.js?v=auto-trade-20260530-12"></script>
 </body>
 </html>

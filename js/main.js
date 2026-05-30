@@ -148,6 +148,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const autoTradeTelegramConfirmButton = document.getElementById('autoTradeTelegramConfirmButton');
     const autoTradeSubmitButton = document.getElementById('autoTradeSubmitButton');
     const autoTradeMessage = document.getElementById('autoTradeMessage');
+    const telegramHelpButton = document.getElementById('telegramHelpButton');
+    const telegramHelpModal = document.getElementById('telegramHelpModal');
+    const telegramHelpCloseButton = document.getElementById('telegramHelpCloseButton');
 
     let currentStockCode = '';
     let refreshTimer = null;
@@ -507,6 +510,18 @@ document.addEventListener('DOMContentLoaded', () => {
         autoTradeSubmitButton.disabled = !autoTradePriceRangeCheckbox?.checked
             || !autoTradeSignalGuardCheckbox?.checked;
     };
+
+    function openTelegramHelp() {
+        if (!telegramHelpModal) return;
+        telegramHelpModal.classList.remove('hidden');
+        telegramHelpCloseButton?.focus();
+    }
+
+    function closeTelegramHelp() {
+        if (!telegramHelpModal) return;
+        telegramHelpModal.classList.add('hidden');
+        telegramHelpButton?.focus();
+    }
 
     const renderPendingOrders = (orders = []) => {
         if (!pendingOrdersList) return;
@@ -1023,6 +1038,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.key === 'Enter') {
             event.preventDefault();
             confirmTelegramConnection();
+        }
+    });
+    telegramHelpButton?.addEventListener('click', openTelegramHelp);
+    telegramHelpCloseButton?.addEventListener('click', closeTelegramHelp);
+    telegramHelpModal?.addEventListener('click', (event) => {
+        if (event.target === telegramHelpModal) {
+            closeTelegramHelp();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && telegramHelpModal && !telegramHelpModal.classList.contains('hidden')) {
+            closeTelegramHelp();
         }
     });
 
