@@ -129,6 +129,7 @@ export function initChartWorkspace() {
     const orderPriceInput = document.getElementById('orderPriceInput');
     const orderQuantityInput = document.getElementById('orderQuantityInput');
     const orderTotalInput = document.getElementById('orderTotalInput');
+    const orderAvailableAmountRow = document.getElementById('orderAvailableAmountRow');
     const orderAvailableAmount = document.getElementById('orderAvailableAmount');
     const orderHoldingRow = document.getElementById('orderHoldingRow');
     const orderHoldingPrice = document.getElementById('orderHoldingPrice');
@@ -233,7 +234,7 @@ export function initChartWorkspace() {
             button.setAttribute('aria-selected', String(isActive));
         });
 
-        if (isOrderPanel) {
+        if (isOrderPanel && currentOrderAction === 'buy') {
             fetchOrderableCash();
         }
     };
@@ -638,16 +639,16 @@ export function initChartWorkspace() {
     const setSellableQuantity = ({
         orderableQuantity = 0,
         holdingQuantity = 0,
-        averagePrice = 0,
+        purchaseAmount = 0,
         profitLoss = 0,
     } = {}) => {
         latestSellableQuantity = Math.max(0, Number(orderableQuantity || holdingQuantity) || 0);
         const displayQuantity = Number(holdingQuantity || orderableQuantity) || 0;
-        const displayAveragePrice = displayQuantity ? Number(averagePrice) || 0 : 0;
+        const displayPurchaseAmount = displayQuantity ? Number(purchaseAmount) || 0 : 0;
         const displayProfitLoss = displayQuantity ? Number(profitLoss) || 0 : 0;
         setHoldingSummary({
             quantityText: `${formatNumber(displayQuantity)}주`,
-            priceText: formatWon(displayAveragePrice),
+            priceText: formatWon(displayPurchaseAmount),
             profitText: formatWon(displayProfitLoss),
             profitValue: displayProfitLoss,
         });
@@ -685,7 +686,7 @@ export function initChartWorkspace() {
             setSellableQuantity({
                 orderableQuantity: Number(payload.orderableQuantity ?? payload.quantity) || 0,
                 holdingQuantity: Number(payload.holdingQuantity ?? payload.quantity) || 0,
-                averagePrice: Number(payload.averagePrice) || 0,
+                purchaseAmount: Number(payload.purchaseAmount) || 0,
                 profitLoss: Number(payload.profitLoss) || 0,
             });
         } catch (error) {
@@ -699,6 +700,11 @@ export function initChartWorkspace() {
         if (!orderAvailableAmount) return;
         if (orderableCashTimer) {
             clearTimeout(orderableCashTimer);
+            orderableCashTimer = null;
+        }
+
+        if (currentOrderAction !== 'buy') {
+            return;
         }
 
         if (!isApiServerAvailable) {
@@ -741,6 +747,7 @@ export function initChartWorkspace() {
             element.classList.toggle('hidden', isPending);
         });
         orderHoldingRow?.classList.toggle('hidden', isPending || currentOrderAction !== 'sell');
+        orderAvailableAmountRow?.classList.toggle('hidden', isPending || currentOrderAction === 'sell');
         pendingOrdersPanel?.classList.toggle('hidden', !isPending);
         if (isPending) {
             setOrderMessage('');
@@ -753,6 +760,7 @@ export function initChartWorkspace() {
             fetchStockHolding();
         } else {
             resetSellableQuantity();
+            if (currentOrderAction === 'buy') fetchOrderableCash();
         }
         updateOrderSubmitLabel();
     };
@@ -859,7 +867,7 @@ export function initChartWorkspace() {
             const orderNo = payload.orderNo ? ` 주문번호 ${payload.orderNo}` : '';
             const doneText = currentOrderAction === 'sell' ? '매도 주문완료' : '매수 주문완료';
             setOrderMessage(`${doneText}${orderNo}`, 'success', { autoHide: 4000 });
-            fetchOrderableCash();
+            if (currentOrderAction === 'buy') fetchOrderableCash();
             if (currentOrderAction === 'sell') fetchStockHolding();
         } catch (error) {
             setOrderMessage(error.message || '주문 전송에 실패했습니다.', 'error');
@@ -1849,7 +1857,7 @@ export function initChartWorkspace() {
         updateMarketSessionStatus();
         if (!isAvailable) {
             setOrderableCashText('계좌 조회 실패', true);
-        } else if (currentOrderAction !== 'pending') {
+        } else if (currentOrderAction === 'buy') {
             fetchOrderableCash();
         }
     };
