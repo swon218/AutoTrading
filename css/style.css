@@ -1508,8 +1508,12 @@ body.overflow-hidden {
     text-align: right;
 }
 
+.order-holding-quantity {
+    grid-column: 1 / -1;
+}
+
 .order-holding-profit {
-    grid-column: 2;
+    grid-column: auto;
 }
 
 .order-holding-summary input.is-up {
