@@ -1508,6 +1508,18 @@ body.overflow-hidden {
     text-align: right;
 }
 
+.order-holding-profit {
+    grid-column: 2;
+}
+
+.order-holding-summary input.is-up {
+    color: #f87171;
+}
+
+.order-holding-summary input.is-down {
+    color: #60a5fa;
+}
+
 .order-holding-summary.is-error input {
     color: #fb7185;
 }

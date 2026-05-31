@@ -133,6 +133,7 @@ export function initChartWorkspace() {
     const orderHoldingRow = document.getElementById('orderHoldingRow');
     const orderHoldingPrice = document.getElementById('orderHoldingPrice');
     const orderHoldingQuantity = document.getElementById('orderHoldingQuantity');
+    const orderHoldingProfit = document.getElementById('orderHoldingProfit');
     const pendingOrdersPanel = document.getElementById('pendingOrdersPanel');
     const pendingOrdersList = document.getElementById('pendingOrdersList');
     const orderMessage = document.getElementById('orderMessage');
@@ -427,6 +428,11 @@ export function initChartWorkspace() {
         return getOrderPriceStepFor(price);
     };
 
+    const formatWon = (value) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? `${formatNumber(number)}원` : '-';
+    };
+
     const isRegularOrderTime = () => {
         const now = new Date();
         const seoulParts = new Intl.DateTimeFormat('en-US', {
@@ -598,12 +604,24 @@ export function initChartWorkspace() {
         orderAvailableAmount.classList.toggle('is-error', isError);
     };
 
-    const setHoldingSummary = ({ priceText = '', quantityText = '', isError = false } = {}) => {
+    const setHoldingSummary = ({
+        priceText = '',
+        quantityText = '',
+        profitText = '',
+        profitValue = 0,
+        isError = false,
+    } = {}) => {
         if (orderHoldingPrice) {
             orderHoldingPrice.value = priceText;
         }
         if (orderHoldingQuantity) {
             orderHoldingQuantity.value = quantityText;
+        }
+        if (orderHoldingProfit) {
+            orderHoldingProfit.value = profitText;
+            const numericProfit = Number(profitValue) || 0;
+            orderHoldingProfit.classList.toggle('is-up', numericProfit > 0);
+            orderHoldingProfit.classList.toggle('is-down', numericProfit < 0);
         }
         orderHoldingRow?.querySelector('.order-holding-summary')?.classList.toggle('is-error', isError);
     };
@@ -617,13 +635,21 @@ export function initChartWorkspace() {
         }
     };
 
-    const setSellableQuantity = ({ orderableQuantity = 0, holdingQuantity = 0, currentPrice = 0 } = {}) => {
+    const setSellableQuantity = ({
+        orderableQuantity = 0,
+        holdingQuantity = 0,
+        averagePrice = 0,
+        profitLoss = 0,
+    } = {}) => {
         latestSellableQuantity = Math.max(0, Number(orderableQuantity || holdingQuantity) || 0);
-        const displayPrice = Number(currentPrice) || latestStockPrice || 0;
         const displayQuantity = Number(holdingQuantity || orderableQuantity) || 0;
+        const displayAveragePrice = displayQuantity ? Number(averagePrice) || 0 : 0;
+        const displayProfitLoss = displayQuantity ? Number(profitLoss) || 0 : 0;
         setHoldingSummary({
-            priceText: displayPrice ? `${formatNumber(displayPrice)}원` : '-',
             quantityText: `${formatNumber(displayQuantity)}주`,
+            priceText: formatWon(displayAveragePrice),
+            profitText: formatWon(displayProfitLoss),
+            profitValue: displayProfitLoss,
         });
         clampSellQuantityInput();
     };
@@ -634,6 +660,7 @@ export function initChartWorkspace() {
         setHoldingSummary({
             priceText: message,
             quantityText: message,
+            profitText: message,
             isError,
         });
     };
@@ -648,7 +675,7 @@ export function initChartWorkspace() {
             return;
         }
 
-        setHoldingSummary({ priceText: '조회 중...', quantityText: '조회 중...' });
+        setHoldingSummary({ priceText: '조회 중...', quantityText: '조회 중...', profitText: '조회 중...' });
         try {
             const response = await authFetch(`/api/account/holding?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
@@ -658,7 +685,8 @@ export function initChartWorkspace() {
             setSellableQuantity({
                 orderableQuantity: Number(payload.orderableQuantity ?? payload.quantity) || 0,
                 holdingQuantity: Number(payload.holdingQuantity ?? payload.quantity) || 0,
-                currentPrice: Number(payload.currentPrice) || 0,
+                averagePrice: Number(payload.averagePrice) || 0,
+                profitLoss: Number(payload.profitLoss) || 0,
             });
         } catch (error) {
             if (requestId !== holdingRequestId) return;
