@@ -18,6 +18,17 @@ export default {
     name: 'CCI',
     aliases: ['cci', 'commodity channel index', '상품채널지수'],
     description: '현재 가격이 일정 기간 평균 가격에서 얼마나 벗어났는지 표시합니다.',
+    help: {
+        title: 'CCI',
+        summary: '현재 가격이 일정 기간 평균 가격에서 얼마나 멀리 벗어났는지 보여주는 지표입니다.',
+        parameters: [
+            '기간: 평균 가격과 편차를 계산할 봉 개수입니다.',
+            '하단값/상단값: 과매도/과매수 또는 과도한 이탈을 판단할 기준입니다.',
+        ],
+        chart: 'CCI가 0보다 위면 평균보다 강한 가격 흐름, 0보다 아래면 평균보다 약한 흐름으로 참고합니다.',
+        autoTrade: '현재 자동매매 엔진에서는 CCI를 주문 신호로 사용하지 않습니다. 차트 확인과 전략 저장용 지표로만 표시됩니다.',
+        caution: '변동성이 큰 종목에서는 기준선을 자주 넘나들 수 있어 추세 확인 지표와 함께 보는 것이 좋습니다.',
+    },
     panel: 'lower',
     fields: [
         { key: 'period', label: '기간', type: 'number', value: 20 },

@@ -210,6 +210,7 @@ export function initChartWorkspace() {
     let pendingOrdersTimer = null;
     let latestSellableQuantity = 0;
     let holdingRequestId = 0;
+    let indicatorHelpModal = null;
 
     const isIndicatorActive = (key) => {
         return activeIndicators.some((indicator) => indicator.key === key);
@@ -413,6 +414,81 @@ export function initChartWorkspace() {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+
+    const renderIndicatorHelpList = (items = []) => {
+        if (!Array.isArray(items) || !items.length) return '';
+        return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+    };
+
+    const renderIndicatorHelpSection = (title, content) => {
+        if (!content || (Array.isArray(content) && !content.length)) return '';
+        const body = Array.isArray(content)
+            ? renderIndicatorHelpList(content)
+            : `<p>${escapeHtml(content)}</p>`;
+        return `
+            <section class="indicator-help-section">
+                <h3>${escapeHtml(title)}</h3>
+                ${body}
+            </section>
+        `;
+    };
+
+    const ensureIndicatorHelpModal = () => {
+        if (indicatorHelpModal) return indicatorHelpModal;
+        indicatorHelpModal = document.createElement('div');
+        indicatorHelpModal.id = 'indicatorHelpModal';
+        indicatorHelpModal.className = 'indicator-help-modal hidden';
+        indicatorHelpModal.setAttribute('role', 'dialog');
+        indicatorHelpModal.setAttribute('aria-modal', 'true');
+        indicatorHelpModal.setAttribute('aria-labelledby', 'indicatorHelpTitle');
+        indicatorHelpModal.innerHTML = `
+            <div class="indicator-help-card">
+                <div class="indicator-help-head">
+                    <h2 id="indicatorHelpTitle">보조지표 설명</h2>
+                    <button id="indicatorHelpCloseButton" type="button" aria-label="설명창 닫기">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div id="indicatorHelpBody" class="indicator-help-body"></div>
+            </div>
+        `;
+        document.body.appendChild(indicatorHelpModal);
+
+        indicatorHelpModal.addEventListener('click', (event) => {
+            if (event.target === indicatorHelpModal) {
+                closeIndicatorHelp();
+            }
+        });
+        indicatorHelpModal.querySelector('#indicatorHelpCloseButton')?.addEventListener('click', closeIndicatorHelp);
+        return indicatorHelpModal;
+    };
+
+    function closeIndicatorHelp() {
+        if (!indicatorHelpModal) return;
+        indicatorHelpModal.classList.add('hidden');
+    }
+
+    const openIndicatorHelp = (indicatorKey) => {
+        const definition = getIndicatorDefinition(indicatorKey);
+        if (!definition) return;
+        const modal = ensureIndicatorHelpModal();
+        const help = definition.help || {};
+        const title = help.title || definition.name || '보조지표';
+        const body = modal.querySelector('#indicatorHelpBody');
+        const titleElement = modal.querySelector('#indicatorHelpTitle');
+        if (titleElement) titleElement.textContent = title;
+        if (body) {
+            body.innerHTML = `
+                ${renderIndicatorHelpSection('개요', help.summary || definition.description)}
+                ${renderIndicatorHelpSection('입력값', help.parameters)}
+                ${renderIndicatorHelpSection('차트에서 보는 법', help.chart)}
+                ${renderIndicatorHelpSection('자동매매 해석', help.autoTrade)}
+                ${renderIndicatorHelpSection('주의할 점', help.caution)}
+            `;
+        }
+        modal.classList.remove('hidden');
+        modal.querySelector('#indicatorHelpCloseButton')?.focus();
+    };
 
     const getOrderPriceStepFor = (price) => {
         if (price < 2000) return 1;
@@ -1070,6 +1146,9 @@ export function initChartWorkspace() {
         if (event.key === 'Escape' && telegramHelpModal && !telegramHelpModal.classList.contains('hidden')) {
             closeTelegramHelp();
         }
+        if (event.key === 'Escape' && indicatorHelpModal && !indicatorHelpModal.classList.contains('hidden')) {
+            closeIndicatorHelp();
+        }
     });
 
     const getIndicatorFieldValue = (indicator, field) => {
@@ -1508,7 +1587,12 @@ export function initChartWorkspace() {
                     <div class="indicator-card" data-indicator-id="${indicator.id}">
                         <div class="indicator-card-header">
                             <div>
-                                <div class="indicator-card-title">${definition.name}</div>
+                                <div class="indicator-card-title-row">
+                                    <div class="indicator-card-title">${definition.name}</div>
+                                    <button type="button" class="indicator-help-button" data-indicator-help="${escapeHtml(definition.key)}" aria-label="${escapeHtml(definition.name)} 설명 보기" title="설명 보기">
+                                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                                    </button>
+                                </div>
                                 <div class="indicator-card-desc">${definition.description}</div>
                             </div>
                             <button type="button" class="indicator-remove-button" data-remove-indicator="${indicator.id}" title="보조지표 삭제">x</button>
@@ -1627,6 +1711,12 @@ export function initChartWorkspace() {
         });
 
         indicatorCards.addEventListener('click', (event) => {
+            const helpButton = event.target.closest('[data-indicator-help]');
+            if (helpButton) {
+                openIndicatorHelp(helpButton.dataset.indicatorHelp);
+                return;
+            }
+
             const removeButton = event.target.closest('[data-remove-indicator]');
             if (!removeButton) return;
 

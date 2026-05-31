@@ -17,6 +17,16 @@ export default {
     name: 'ATR',
     aliases: ['atr', 'average true range', '평균진폭', '변동성'],
     description: '고가/저가/전일종가를 이용해 평균 변동폭을 표시합니다.',
+    help: {
+        title: 'ATR',
+        summary: '가격 방향이 아니라 평균 변동폭을 보여주는 지표입니다.',
+        parameters: [
+            '기간: 변동폭 평균을 계산할 봉 개수입니다.',
+        ],
+        chart: 'ATR이 커지면 변동성이 커진 상태, 작아지면 변동성이 줄어든 상태로 참고합니다.',
+        autoTrade: '현재 자동매매 엔진에서는 ATR을 주문 신호로 사용하지 않습니다. 차트 확인과 전략 저장용 지표로만 표시됩니다.',
+        caution: 'ATR은 상승/하락 방향을 알려주지 않으므로 방향성 지표와 함께 봐야 합니다.',
+    },
     panel: 'lower',
     fields: [
         { key: 'period', label: '기간', type: 'number', value: 14 },
