@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://appreciate-june-bin-achievement.trycloudflare.com/api/:path*"
+      "destination": "https://prevention-merit-seconds-descriptions.trycloudflare.com/api/:path*"
     }
   ]
 }
