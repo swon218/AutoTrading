@@ -49,7 +49,7 @@ const {
     updateWatchlist,
 } = require('./backend/watchlists');
 
-const PORT = Number(process.env.PORT || 4000);
+const PORT = Number(process.env.PORT || 3000);
 
 function getRequestUrl(request) {
     const host = request.headers.host || `localhost:${PORT}`;
