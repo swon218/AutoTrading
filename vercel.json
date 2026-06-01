@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://points-anytime-specifies-strengthening.trycloudflare.com/api/:path*"
+      "destination": "https://flag-tanks-colours-resistance.trycloudflare.com/api/:path*"
     }
   ]
 }
