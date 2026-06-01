@@ -132,6 +132,7 @@ export function initChartWorkspace() {
     const orderAvailableAmountRow = document.getElementById('orderAvailableAmountRow');
     const orderAvailableAmount = document.getElementById('orderAvailableAmount');
     const orderHoldingRow = document.getElementById('orderHoldingRow');
+    const orderHoldingAveragePrice = document.getElementById('orderHoldingAveragePrice');
     const orderHoldingPrice = document.getElementById('orderHoldingPrice');
     const orderHoldingQuantity = document.getElementById('orderHoldingQuantity');
     const orderHoldingProfit = document.getElementById('orderHoldingProfit');
@@ -682,12 +683,16 @@ export function initChartWorkspace() {
     };
 
     const setHoldingSummary = ({
+        averagePriceText = '',
         priceText = '',
         quantityText = '',
         profitText = '',
         profitValue = 0,
         isError = false,
     } = {}) => {
+        if (orderHoldingAveragePrice) {
+            orderHoldingAveragePrice.value = averagePriceText;
+        }
         if (orderHoldingPrice) {
             orderHoldingPrice.value = priceText;
         }
@@ -715,14 +720,17 @@ export function initChartWorkspace() {
     const setSellableQuantity = ({
         orderableQuantity = 0,
         holdingQuantity = 0,
+        averagePrice = 0,
         purchaseAmount = 0,
         profitLoss = 0,
     } = {}) => {
         latestSellableQuantity = Math.max(0, Number(orderableQuantity || holdingQuantity) || 0);
         const displayQuantity = Number(holdingQuantity || orderableQuantity) || 0;
+        const displayAveragePrice = displayQuantity ? Number(averagePrice) || 0 : 0;
         const displayPurchaseAmount = displayQuantity ? Number(purchaseAmount) || 0 : 0;
         const displayProfitLoss = displayQuantity ? Number(profitLoss) || 0 : 0;
         setHoldingSummary({
+            averagePriceText: formatWon(displayAveragePrice),
             quantityText: `${formatNumber(displayQuantity)}주`,
             priceText: formatWon(displayPurchaseAmount),
             profitText: formatWon(displayProfitLoss),
@@ -735,6 +743,7 @@ export function initChartWorkspace() {
         holdingRequestId += 1;
         latestSellableQuantity = 0;
         setHoldingSummary({
+            averagePriceText: message,
             priceText: message,
             quantityText: message,
             profitText: message,
@@ -752,7 +761,12 @@ export function initChartWorkspace() {
             return;
         }
 
-        setHoldingSummary({ priceText: '조회 중...', quantityText: '조회 중...', profitText: '조회 중...' });
+        setHoldingSummary({
+            averagePriceText: '조회 중...',
+            priceText: '조회 중...',
+            quantityText: '조회 중...',
+            profitText: '조회 중...',
+        });
         try {
             const response = await authFetch(`/api/account/holding?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
@@ -762,6 +776,7 @@ export function initChartWorkspace() {
             setSellableQuantity({
                 orderableQuantity: Number(payload.orderableQuantity ?? payload.quantity) || 0,
                 holdingQuantity: Number(payload.holdingQuantity ?? payload.quantity) || 0,
+                averagePrice: Number(payload.averagePrice) || 0,
                 purchaseAmount: Number(payload.purchaseAmount) || 0,
                 profitLoss: Number(payload.profitLoss) || 0,
             });

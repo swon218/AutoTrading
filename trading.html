@@ -292,12 +292,16 @@
                         <div id="orderHoldingRow" class="order-field order-trade-section hidden">
                             <span>매도 가능</span>
                             <div class="order-holding-summary" aria-label="보유 종목 매도 가능 정보">
-                                <div class="order-holding-quantity">
+                                <div>
+                                    <span>평균 매입단가</span>
+                                    <input id="orderHoldingAveragePrice" type="text" placeholder="조회 중..." readonly>
+                                </div>
+                                <div>
                                     <span>보유수량</span>
                                     <input id="orderHoldingQuantity" type="text" placeholder="조회 중..." readonly>
                                 </div>
                                 <div>
-                                    <span>매입금액</span>
+                                    <span>총 매입금액</span>
                                     <input id="orderHoldingPrice" type="text" placeholder="조회 중..." readonly>
                                 </div>
                                 <div class="order-holding-profit">
