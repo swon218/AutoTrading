@@ -24,6 +24,16 @@ export default {
     name: 'OBV',
     aliases: ['obv', 'on balance volume', '거래량잔고'],
     description: '상승일 거래량은 더하고 하락일 거래량은 빼서 거래량 흐름을 표시합니다.',
+    help: {
+        title: 'OBV',
+        summary: '가격이 오른 봉의 거래량은 더하고 내린 봉의 거래량은 빼서 누적 거래량 흐름을 보여주는 지표입니다.',
+        parameters: [
+            '평균 기간: OBV 흐름을 부드럽게 비교하기 위한 평균선 기간입니다.',
+        ],
+        chart: '가격보다 OBV가 먼저 강해지면 매수세 유입, 가격은 오르는데 OBV가 약하면 상승 힘 약화를 참고합니다.',
+        autoTrade: '현재 자동매매 엔진에서는 OBV를 주문 신호로 사용하지 않습니다. 차트 확인과 전략 저장용 지표로만 표시됩니다.',
+        caution: '거래량 급증일이 있으면 누적값이 크게 치우칠 수 있습니다.',
+    },
     panel: 'lower',
     fields: [
         { key: 'average', label: '평균 기간', type: 'number', value: 9 },

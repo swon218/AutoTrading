@@ -129,10 +129,13 @@ export function initChartWorkspace() {
     const orderPriceInput = document.getElementById('orderPriceInput');
     const orderQuantityInput = document.getElementById('orderQuantityInput');
     const orderTotalInput = document.getElementById('orderTotalInput');
+    const orderAvailableAmountRow = document.getElementById('orderAvailableAmountRow');
     const orderAvailableAmount = document.getElementById('orderAvailableAmount');
     const orderHoldingRow = document.getElementById('orderHoldingRow');
+    const orderHoldingAveragePrice = document.getElementById('orderHoldingAveragePrice');
     const orderHoldingPrice = document.getElementById('orderHoldingPrice');
     const orderHoldingQuantity = document.getElementById('orderHoldingQuantity');
+    const orderHoldingProfit = document.getElementById('orderHoldingProfit');
     const pendingOrdersPanel = document.getElementById('pendingOrdersPanel');
     const pendingOrdersList = document.getElementById('pendingOrdersList');
     const orderMessage = document.getElementById('orderMessage');
@@ -208,6 +211,7 @@ export function initChartWorkspace() {
     let pendingOrdersTimer = null;
     let latestSellableQuantity = 0;
     let holdingRequestId = 0;
+    let indicatorHelpModal = null;
 
     const isIndicatorActive = (key) => {
         return activeIndicators.some((indicator) => indicator.key === key);
@@ -232,7 +236,7 @@ export function initChartWorkspace() {
             button.setAttribute('aria-selected', String(isActive));
         });
 
-        if (isOrderPanel) {
+        if (isOrderPanel && currentOrderAction === 'buy') {
             fetchOrderableCash();
         }
     };
@@ -412,6 +416,81 @@ export function initChartWorkspace() {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
 
+    const renderIndicatorHelpList = (items = []) => {
+        if (!Array.isArray(items) || !items.length) return '';
+        return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`;
+    };
+
+    const renderIndicatorHelpSection = (title, content) => {
+        if (!content || (Array.isArray(content) && !content.length)) return '';
+        const body = Array.isArray(content)
+            ? renderIndicatorHelpList(content)
+            : `<p>${escapeHtml(content)}</p>`;
+        return `
+            <section class="indicator-help-section">
+                <h3>${escapeHtml(title)}</h3>
+                ${body}
+            </section>
+        `;
+    };
+
+    const ensureIndicatorHelpModal = () => {
+        if (indicatorHelpModal) return indicatorHelpModal;
+        indicatorHelpModal = document.createElement('div');
+        indicatorHelpModal.id = 'indicatorHelpModal';
+        indicatorHelpModal.className = 'indicator-help-modal hidden';
+        indicatorHelpModal.setAttribute('role', 'dialog');
+        indicatorHelpModal.setAttribute('aria-modal', 'true');
+        indicatorHelpModal.setAttribute('aria-labelledby', 'indicatorHelpTitle');
+        indicatorHelpModal.innerHTML = `
+            <div class="indicator-help-card">
+                <div class="indicator-help-head">
+                    <h2 id="indicatorHelpTitle">보조지표 설명</h2>
+                    <button id="indicatorHelpCloseButton" type="button" aria-label="설명창 닫기">
+                        <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <div id="indicatorHelpBody" class="indicator-help-body"></div>
+            </div>
+        `;
+        document.body.appendChild(indicatorHelpModal);
+
+        indicatorHelpModal.addEventListener('click', (event) => {
+            if (event.target === indicatorHelpModal) {
+                closeIndicatorHelp();
+            }
+        });
+        indicatorHelpModal.querySelector('#indicatorHelpCloseButton')?.addEventListener('click', closeIndicatorHelp);
+        return indicatorHelpModal;
+    };
+
+    function closeIndicatorHelp() {
+        if (!indicatorHelpModal) return;
+        indicatorHelpModal.classList.add('hidden');
+    }
+
+    const openIndicatorHelp = (indicatorKey) => {
+        const definition = getIndicatorDefinition(indicatorKey);
+        if (!definition) return;
+        const modal = ensureIndicatorHelpModal();
+        const help = definition.help || {};
+        const title = help.title || definition.name || '보조지표';
+        const body = modal.querySelector('#indicatorHelpBody');
+        const titleElement = modal.querySelector('#indicatorHelpTitle');
+        if (titleElement) titleElement.textContent = title;
+        if (body) {
+            body.innerHTML = `
+                ${renderIndicatorHelpSection('개요', help.summary || definition.description)}
+                ${renderIndicatorHelpSection('입력값', help.parameters)}
+                ${renderIndicatorHelpSection('차트에서 보는 법', help.chart)}
+                ${renderIndicatorHelpSection('자동매매 해석', help.autoTrade)}
+                ${renderIndicatorHelpSection('주의할 점', help.caution)}
+            `;
+        }
+        modal.classList.remove('hidden');
+        modal.querySelector('#indicatorHelpCloseButton')?.focus();
+    };
+
     const getOrderPriceStepFor = (price) => {
         if (price < 2000) return 1;
         if (price < 5000) return 5;
@@ -425,6 +504,11 @@ export function initChartWorkspace() {
     const getOrderPriceStep = () => {
         const price = parseOrderNumber(orderPriceInput?.value) || latestStockPrice || 0;
         return getOrderPriceStepFor(price);
+    };
+
+    const formatWon = (value) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? `${formatNumber(number)}원` : '-';
     };
 
     const isRegularOrderTime = () => {
@@ -598,12 +682,28 @@ export function initChartWorkspace() {
         orderAvailableAmount.classList.toggle('is-error', isError);
     };
 
-    const setHoldingSummary = ({ priceText = '', quantityText = '', isError = false } = {}) => {
+    const setHoldingSummary = ({
+        averagePriceText = '',
+        priceText = '',
+        quantityText = '',
+        profitText = '',
+        profitValue = 0,
+        isError = false,
+    } = {}) => {
+        if (orderHoldingAveragePrice) {
+            orderHoldingAveragePrice.value = averagePriceText;
+        }
         if (orderHoldingPrice) {
             orderHoldingPrice.value = priceText;
         }
         if (orderHoldingQuantity) {
             orderHoldingQuantity.value = quantityText;
+        }
+        if (orderHoldingProfit) {
+            orderHoldingProfit.value = profitText;
+            const numericProfit = Number(profitValue) || 0;
+            orderHoldingProfit.classList.toggle('is-up', numericProfit > 0);
+            orderHoldingProfit.classList.toggle('is-down', numericProfit < 0);
         }
         orderHoldingRow?.querySelector('.order-holding-summary')?.classList.toggle('is-error', isError);
     };
@@ -617,13 +717,24 @@ export function initChartWorkspace() {
         }
     };
 
-    const setSellableQuantity = ({ orderableQuantity = 0, holdingQuantity = 0, currentPrice = 0 } = {}) => {
+    const setSellableQuantity = ({
+        orderableQuantity = 0,
+        holdingQuantity = 0,
+        averagePrice = 0,
+        purchaseAmount = 0,
+        profitLoss = 0,
+    } = {}) => {
         latestSellableQuantity = Math.max(0, Number(orderableQuantity || holdingQuantity) || 0);
-        const displayPrice = Number(currentPrice) || latestStockPrice || 0;
         const displayQuantity = Number(holdingQuantity || orderableQuantity) || 0;
+        const displayAveragePrice = displayQuantity ? Number(averagePrice) || 0 : 0;
+        const displayPurchaseAmount = displayQuantity ? Number(purchaseAmount) || 0 : 0;
+        const displayProfitLoss = displayQuantity ? Number(profitLoss) || 0 : 0;
         setHoldingSummary({
-            priceText: displayPrice ? `${formatNumber(displayPrice)}원` : '-',
+            averagePriceText: formatWon(displayAveragePrice),
             quantityText: `${formatNumber(displayQuantity)}주`,
+            priceText: formatWon(displayPurchaseAmount),
+            profitText: formatWon(displayProfitLoss),
+            profitValue: displayProfitLoss,
         });
         clampSellQuantityInput();
     };
@@ -632,8 +743,10 @@ export function initChartWorkspace() {
         holdingRequestId += 1;
         latestSellableQuantity = 0;
         setHoldingSummary({
+            averagePriceText: message,
             priceText: message,
             quantityText: message,
+            profitText: message,
             isError,
         });
     };
@@ -648,7 +761,12 @@ export function initChartWorkspace() {
             return;
         }
 
-        setHoldingSummary({ priceText: '조회 중...', quantityText: '조회 중...' });
+        setHoldingSummary({
+            averagePriceText: '조회 중...',
+            priceText: '조회 중...',
+            quantityText: '조회 중...',
+            profitText: '조회 중...',
+        });
         try {
             const response = await authFetch(`/api/account/holding?code=${encodeURIComponent(currentStockCode)}`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
@@ -658,7 +776,9 @@ export function initChartWorkspace() {
             setSellableQuantity({
                 orderableQuantity: Number(payload.orderableQuantity ?? payload.quantity) || 0,
                 holdingQuantity: Number(payload.holdingQuantity ?? payload.quantity) || 0,
-                currentPrice: Number(payload.currentPrice) || 0,
+                averagePrice: Number(payload.averagePrice) || 0,
+                purchaseAmount: Number(payload.purchaseAmount) || 0,
+                profitLoss: Number(payload.profitLoss) || 0,
             });
         } catch (error) {
             if (requestId !== holdingRequestId) return;
@@ -671,6 +791,11 @@ export function initChartWorkspace() {
         if (!orderAvailableAmount) return;
         if (orderableCashTimer) {
             clearTimeout(orderableCashTimer);
+            orderableCashTimer = null;
+        }
+
+        if (currentOrderAction !== 'buy') {
+            return;
         }
 
         if (!isApiServerAvailable) {
@@ -713,6 +838,7 @@ export function initChartWorkspace() {
             element.classList.toggle('hidden', isPending);
         });
         orderHoldingRow?.classList.toggle('hidden', isPending || currentOrderAction !== 'sell');
+        orderAvailableAmountRow?.classList.toggle('hidden', isPending || currentOrderAction === 'sell');
         pendingOrdersPanel?.classList.toggle('hidden', !isPending);
         if (isPending) {
             setOrderMessage('');
@@ -725,6 +851,7 @@ export function initChartWorkspace() {
             fetchStockHolding();
         } else {
             resetSellableQuantity();
+            if (currentOrderAction === 'buy') fetchOrderableCash();
         }
         updateOrderSubmitLabel();
     };
@@ -831,7 +958,7 @@ export function initChartWorkspace() {
             const orderNo = payload.orderNo ? ` 주문번호 ${payload.orderNo}` : '';
             const doneText = currentOrderAction === 'sell' ? '매도 주문완료' : '매수 주문완료';
             setOrderMessage(`${doneText}${orderNo}`, 'success', { autoHide: 4000 });
-            fetchOrderableCash();
+            if (currentOrderAction === 'buy') fetchOrderableCash();
             if (currentOrderAction === 'sell') fetchStockHolding();
         } catch (error) {
             setOrderMessage(error.message || '주문 전송에 실패했습니다.', 'error');
@@ -1033,6 +1160,9 @@ export function initChartWorkspace() {
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && telegramHelpModal && !telegramHelpModal.classList.contains('hidden')) {
             closeTelegramHelp();
+        }
+        if (event.key === 'Escape' && indicatorHelpModal && !indicatorHelpModal.classList.contains('hidden')) {
+            closeIndicatorHelp();
         }
     });
 
@@ -1472,7 +1602,12 @@ export function initChartWorkspace() {
                     <div class="indicator-card" data-indicator-id="${indicator.id}">
                         <div class="indicator-card-header">
                             <div>
-                                <div class="indicator-card-title">${definition.name}</div>
+                                <div class="indicator-card-title-row">
+                                    <div class="indicator-card-title">${definition.name}</div>
+                                    <button type="button" class="indicator-help-button" data-indicator-help="${escapeHtml(definition.key)}" aria-label="${escapeHtml(definition.name)} 설명 보기" title="설명 보기">
+                                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                                    </button>
+                                </div>
                                 <div class="indicator-card-desc">${definition.description}</div>
                             </div>
                             <button type="button" class="indicator-remove-button" data-remove-indicator="${indicator.id}" title="보조지표 삭제">x</button>
@@ -1591,6 +1726,12 @@ export function initChartWorkspace() {
         });
 
         indicatorCards.addEventListener('click', (event) => {
+            const helpButton = event.target.closest('[data-indicator-help]');
+            if (helpButton) {
+                openIndicatorHelp(helpButton.dataset.indicatorHelp);
+                return;
+            }
+
             const removeButton = event.target.closest('[data-remove-indicator]');
             if (!removeButton) return;
 
@@ -1821,7 +1962,7 @@ export function initChartWorkspace() {
         updateMarketSessionStatus();
         if (!isAvailable) {
             setOrderableCashText('계좌 조회 실패', true);
-        } else if (currentOrderAction !== 'pending') {
+        } else if (currentOrderAction === 'buy') {
             fetchOrderableCash();
         }
     };

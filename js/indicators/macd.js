@@ -20,6 +20,18 @@ export default {
     name: 'MACD',
     aliases: ['macd', '엠에이씨디'],
     description: 'MACD와 시그널선의 교차를 확인합니다.',
+    help: {
+        title: 'MACD',
+        summary: '빠른 EMA와 느린 EMA의 차이를 이용해 추세 전환과 모멘텀을 보는 지표입니다.',
+        parameters: [
+            '단기 EMA: 빠르게 반응하는 이동평균 기간입니다.',
+            '장기 EMA: 더 느리게 반응하는 이동평균 기간입니다.',
+            'Signal: MACD선을 다시 평균낸 시그널선 기간입니다.',
+        ],
+        chart: 'MACD선이 시그널선 위로 올라오면 상승 모멘텀, 아래로 내려가면 약화 신호로 참고합니다.',
+        autoTrade: '현재 자동매매에서는 MACD선이 시그널선을 아래에서 위로 돌파하는 순간을 매수 신호로 봅니다.',
+        caution: '횡보장에서는 교차가 자주 발생해 신호가 흔들릴 수 있습니다.',
+    },
     panel: 'lower',
     fields: [
         { key: 'fast', label: '단기 EMA', type: 'number', value: 12 },

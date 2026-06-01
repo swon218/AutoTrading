@@ -1,5 +1,5 @@
 *.log
 __pycache__/
-.env
 .idea/
+.env
 node_modules/

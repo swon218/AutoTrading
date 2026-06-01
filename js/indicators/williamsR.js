@@ -19,6 +19,18 @@ export default {
     name: 'Williams %R',
     aliases: ['williams', 'williams %r', 'williamsr', '윌리엄스', '윌리엄스r'],
     description: '최근 고가/저가 범위 안에서 종가 위치를 -100~0 범위로 표시합니다.',
+    help: {
+        title: 'Williams %R',
+        summary: '최근 고가/저가 범위에서 현재 종가가 어느 위치에 있는지 -100부터 0 사이로 표시하는 지표입니다.',
+        parameters: [
+            '기간: 최근 고가/저가 범위를 계산할 봉 개수입니다.',
+            '하단값: 과매도 기준입니다. 보통 -80 근처를 사용합니다.',
+            '상단값: 과매수 기준입니다. 보통 -20 근처를 사용합니다.',
+        ],
+        chart: '값이 -80 아래에 가까우면 과매도, -20 위에 가까우면 과매수 구간으로 참고합니다.',
+        autoTrade: '현재 자동매매 엔진에서는 Williams %R을 주문 신호로 사용하지 않습니다. 차트 확인과 전략 저장용 지표로만 표시됩니다.',
+        caution: '과매도/과매수 구간에 오래 머무를 수 있어 단독 매매 기준으로 쓰기에는 위험할 수 있습니다.',
+    },
     panel: 'lower',
     fields: [
         { key: 'period', label: '기간', type: 'number', value: 14 },

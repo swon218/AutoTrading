@@ -1508,6 +1508,18 @@ body.overflow-hidden {
     text-align: right;
 }
 
+.order-holding-profit {
+    grid-column: auto;
+}
+
+.order-holding-summary input.is-up {
+    color: #f87171;
+}
+
+.order-holding-summary input.is-down {
+    color: #60a5fa;
+}
+
 .order-holding-summary.is-error input {
     color: #fb7185;
 }
@@ -2529,6 +2541,31 @@ body.overflow-hidden {
     font-weight: 700;
 }
 
+.indicator-card-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.indicator-help-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 1px solid #334155;
+    border-radius: 9999px;
+    background-color: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.72rem;
+}
+
+.indicator-help-button:hover {
+    border-color: rgba(16, 185, 129, 0.75);
+    color: #ffffff;
+}
+
 .indicator-card-desc {
     margin-top: 0.15rem;
     color: #94a3b8;
@@ -2601,6 +2638,92 @@ body.overflow-hidden {
 .indicator-color-field input[type="color"]::-webkit-color-swatch {
     border: 0;
     border-radius: 0.2rem;
+}
+
+.indicator-help-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 75;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(2, 6, 23, 0.68);
+    padding: 1rem;
+}
+
+.indicator-help-modal.hidden {
+    display: none;
+}
+
+.indicator-help-card {
+    width: min(34rem, 100%);
+    max-height: min(42rem, calc(100vh - 2rem));
+    overflow: auto;
+    border: 1px solid #334155;
+    border-radius: 0.65rem;
+    background-color: #111827;
+    box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.4);
+}
+
+.indicator-help-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border-bottom: 1px solid #334155;
+    padding: 0.9rem 1rem;
+}
+
+.indicator-help-head h2 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: 1rem;
+    font-weight: 900;
+}
+
+.indicator-help-head button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 1px solid #334155;
+    border-radius: 9999px;
+    background-color: transparent;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.indicator-help-head button:hover {
+    border-color: #475569;
+    color: #ffffff;
+}
+
+.indicator-help-body {
+    display: grid;
+    gap: 0.9rem;
+    padding: 1rem 1.1rem 1.15rem;
+    color: #cbd5e1;
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+.indicator-help-section h3 {
+    margin: 0 0 0.28rem;
+    color: #f8fafc;
+    font-size: 0.86rem;
+    font-weight: 900;
+}
+
+.indicator-help-section p,
+.indicator-help-section ul {
+    margin: 0;
+}
+
+.indicator-help-section ul {
+    display: grid;
+    gap: 0.28rem;
+    padding-left: 1.1rem;
 }
 
 .indicator-strategy-actions {

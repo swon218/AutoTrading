@@ -24,6 +24,19 @@ export default {
     name: '스토캐스틱',
     aliases: ['스토캐스틱', 'stochastic', 'slow stochastic', 'fast stochastic', 'stoch'],
     description: '최근 고가/저가 범위에서 현재 종가 위치를 %K/%D로 표시합니다.',
+    help: {
+        title: '스토캐스틱',
+        summary: '최근 고가와 저가 범위 안에서 현재 종가가 어디에 있는지 %K와 %D로 보여주는 지표입니다.',
+        parameters: [
+            '%K 기간: 최근 고가/저가 범위를 계산할 봉 개수입니다.',
+            '%K 평활: %K선을 부드럽게 만드는 평균 기간입니다.',
+            '%D 기간: %K의 신호선 역할을 하는 평균 기간입니다.',
+            '하단값/상단값: 과매도/과매수 기준입니다.',
+        ],
+        chart: '%K가 %D를 상향 돌파하면 단기 반등 신호, 하향 돌파하면 약화 신호로 참고합니다.',
+        autoTrade: '현재 자동매매에서는 %K가 %D를 아래에서 위로 돌파하고, 최신 %K가 하단값 이하일 때 매수 신호로 봅니다.',
+        caution: '짧은 기간에서는 매우 민감해서 신호가 자주 발생할 수 있습니다.',
+    },
     panel: 'lower',
     fields: [
         { key: 'period', label: '%K 기간', type: 'number', value: 14 },
