@@ -96,7 +96,16 @@ function sendJson(response, statusCode, payload) {
 
 function sendStatic(request, response) {
     const requestUrl = getRequestUrl(request);
-    const pathname = decodeURIComponent(requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname);
+    let pathname;
+
+    try {
+        pathname = decodeURIComponent(requestUrl.pathname === '/' ? '/index.html' : requestUrl.pathname);
+    } catch {
+        response.writeHead(400);
+        response.end('Bad request');
+        return;
+    }
+
     const filePath = path.normalize(path.join(ROOT_DIR, pathname));
 
     if (!filePath.startsWith(ROOT_DIR)) {
