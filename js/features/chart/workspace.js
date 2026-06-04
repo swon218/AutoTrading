@@ -4,7 +4,11 @@ import {
     indicatorDefinitions,
     normalizeIndicatorValues,
 } from '../../indicators/registry.js';
-import { authFetch, createAuthenticatedEventSource } from '../../frontend/apiClient.js';
+import {
+    authFetch,
+    createAuthenticatedEventSource,
+    getClientSessionMode,
+} from '../../frontend/apiClient.js';
 import { formatNumber } from './format.js';
 import {
     cloneIndicatorFromDefinition,
@@ -212,6 +216,12 @@ export function initChartWorkspace() {
     let latestSellableQuantity = 0;
     let holdingRequestId = 0;
     let indicatorHelpModal = null;
+    let isGuestSession = true;
+
+    const GUEST_TRADING_MESSAGE = '로그인하지 않은 상태에서는 차트 조회와 보조지표 추가만 이용할 수 있습니다.';
+    const LOGIN_REQUIRED_MESSAGE = `${GUEST_TRADING_MESSAGE} 주문, 자동매매, 지표 저장은 로그인 후 이용해주세요.`;
+
+    const isGuestTradingMode = () => isGuestSession && !isStaticStrategyChart;
 
     const isIndicatorActive = (key) => {
         return activeIndicators.some((indicator) => indicator.key === key);
@@ -574,9 +584,38 @@ export function initChartWorkspace() {
 
     const updateAutoTradeSubmitState = () => {
         if (!autoTradeSubmitButton) return;
+        if (isGuestTradingMode()) {
+            autoTradeSubmitButton.disabled = true;
+            return;
+        }
         autoTradeSubmitButton.disabled = !autoTradePriceRangeCheckbox?.checked
             || !autoTradeSignalGuardCheckbox?.checked;
     };
+
+    const applyGuestTradingRestrictions = () => {
+        if (!isGuestTradingMode()) return;
+
+        if (orderSubmitButton) orderSubmitButton.disabled = true;
+        if (autoTradeSubmitButton) autoTradeSubmitButton.disabled = true;
+        if (indicatorSaveButton) indicatorSaveButton.disabled = true;
+        if (indicatorDeleteButton) indicatorDeleteButton.disabled = true;
+        if (strategyNameMessage) strategyNameMessage.textContent = GUEST_TRADING_MESSAGE;
+        setOrderMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+        setAutoTradeMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+    };
+
+    getClientSessionMode()
+        .then((mode) => {
+            isGuestSession = mode.isGuest;
+            applyGuestTradingRestrictions();
+            updateOrderSubmitLabel();
+            updateAutoTradeSubmitState();
+        })
+        .catch((error) => {
+            console.warn('Session mode check failed.', error);
+            isGuestSession = true;
+            applyGuestTradingRestrictions();
+        });
 
     function openTelegramHelp() {
         if (!telegramHelpModal) return;
@@ -637,6 +676,11 @@ export function initChartWorkspace() {
 
     const fetchPendingOrders = async () => {
         if (!pendingOrdersList) return;
+        if (isGuestTradingMode()) {
+            pendingOrdersList.innerHTML = '<div class="pending-order-empty">로그인 후 미체결 주문을 조회할 수 있습니다.</div>';
+            setOrderMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+            return;
+        }
         if (pendingOrdersTimer) {
             clearTimeout(pendingOrdersTimer);
             pendingOrdersTimer = null;
@@ -789,6 +833,10 @@ export function initChartWorkspace() {
 
     const fetchOrderableCash = async () => {
         if (!orderAvailableAmount) return;
+        if (isGuestTradingMode()) {
+            setOrderableCashText('로그인 필요', true);
+            return;
+        }
         if (orderableCashTimer) {
             clearTimeout(orderableCashTimer);
             orderableCashTimer = null;
@@ -825,7 +873,7 @@ export function initChartWorkspace() {
         const label = currentOrderAction === 'sell' ? '매도' : currentOrderAction === 'pending' ? '대기' : '매수';
         orderSubmitButton.textContent = `${label} 주문하기`;
         orderSubmitButton.classList.toggle('is-sell', currentOrderAction === 'sell');
-        orderSubmitButton.disabled = currentOrderAction === 'pending';
+        orderSubmitButton.disabled = currentOrderAction === 'pending' || isGuestTradingMode();
     };
 
     const setOrderAction = (action) => {
@@ -905,6 +953,10 @@ export function initChartWorkspace() {
     };
 
     const submitStockOrder = async () => {
+        if (isGuestTradingMode()) {
+            setOrderMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+            return;
+        }
         if (currentOrderAction === 'pending') {
             setOrderMessage('대기 주문은 아직 주문 전송 대상이 아닙니다.', 'error');
             return;
@@ -1035,6 +1087,10 @@ export function initChartWorkspace() {
     }, true);
 
     pendingOrdersList?.addEventListener('click', async (event) => {
+        if (isGuestTradingMode()) {
+            setOrderMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+            return;
+        }
         const stepButton = event.target.closest('[data-pending-step-target]');
         if (stepButton) {
             const card = stepButton.closest('.pending-order-card');
@@ -1329,6 +1385,10 @@ export function initChartWorkspace() {
 
     const fetchAutoTradeCash = async () => {
         if (!autoTradeCashInput) return;
+        if (isGuestTradingMode()) {
+            autoTradeCashInput.value = '로그인 필요';
+            return;
+        }
         autoTradeCashInput.value = '조회 중...';
         try {
             const response = await authFetch('/api/account/orderable-cash', { cache: 'no-store' });
@@ -1356,6 +1416,13 @@ export function initChartWorkspace() {
             autoTradeTelegramVerifyButton?.classList.toggle('hidden', status !== 'needs-verification');
             autoTradeTelegramCodeRow?.classList.add('hidden');
         };
+
+        if (isGuestTradingMode()) {
+            isTelegramConfigured = false;
+            setTelegramStatusText('로그인 후 텔레그램 연동을 사용할 수 있습니다.');
+            setTelegramStatusClass('missing');
+            return;
+        }
 
         setTelegramStatusText('텔레그램 연동 상태를 확인 중입니다.');
         setTelegramStatusClass('missing');
@@ -1386,6 +1453,10 @@ export function initChartWorkspace() {
 
     async function verifyTelegramConnection() {
         if (!autoTradeTelegramVerifyButton) return;
+        if (isGuestTradingMode()) {
+            setAutoTradeMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+            return;
+        }
         autoTradeTelegramVerifyButton.disabled = true;
         autoTradeTelegramVerifyButton.textContent = '인증 중';
         setAutoTradeMessage('텔레그램 인증코드를 보내는 중입니다...');
@@ -1410,6 +1481,10 @@ export function initChartWorkspace() {
 
     async function confirmTelegramConnection() {
         if (!autoTradeTelegramConfirmButton) return;
+        if (isGuestTradingMode()) {
+            setAutoTradeMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+            return;
+        }
         const code = String(autoTradeTelegramCodeInput?.value || '').replace(/[^\d]/g, '');
         if (!/^\d{6}$/.test(code)) {
             setAutoTradeMessage('6자리 인증코드를 입력하세요.', 'error');
@@ -1448,6 +1523,10 @@ export function initChartWorkspace() {
     };
 
     const submitAutoTradeRule = async () => {
+        if (isGuestTradingMode()) {
+            setAutoTradeMessage(LOGIN_REQUIRED_MESSAGE, 'error');
+            return;
+        }
         if (!currentStockCode) {
             setAutoTradeMessage('먼저 종목을 검색해서 선택하세요.', 'error');
             return;
@@ -1763,6 +1842,10 @@ export function initChartWorkspace() {
         });
 
         indicatorDeleteButton?.addEventListener('click', () => {
+            if (isGuestTradingMode()) {
+                setStrategyMessage(LOGIN_REQUIRED_MESSAGE);
+                return;
+            }
             const selectedStrategy = getSelectedStrategy();
             if (!selectedStrategy) {
                 setStrategyMessage('삭제할 전략을 선택하세요.');
@@ -1790,6 +1873,10 @@ export function initChartWorkspace() {
         });
 
         indicatorSaveButton?.addEventListener('click', () => {
+            if (isGuestTradingMode()) {
+                setStrategyMessage(LOGIN_REQUIRED_MESSAGE);
+                return;
+            }
             if (!activeIndicators.length) {
                 setStrategyMessage('저장할 보조지표를 먼저 추가하세요.');
                 return;

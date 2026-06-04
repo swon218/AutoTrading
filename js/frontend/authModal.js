@@ -5,6 +5,7 @@ import {
     signOut,
     signUpWithProfile,
 } from './supabaseClient.js';
+import { KIWOOM_CREDENTIAL_GUIDE } from './apiClient.js';
 
 const TEXT = {
     login: '\uB85C\uADF8\uC778',
@@ -38,6 +39,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!accountButton) return;
 
     let currentUser = null;
+    const shouldShowCredentialGuide = () => {
+        const path = window.location.pathname.split('/').pop() || 'index.html';
+        return path !== 'news.html';
+    };
 
     accountButton.className = 'login-trigger';
     accountButton.type = 'button';
@@ -151,6 +156,40 @@ document.addEventListener('DOMContentLoaded', () => {
             <i class="fa-solid fa-chevron-down account-menu-caret" aria-hidden="true"></i>
         `;
         accountButton.setAttribute('aria-haspopup', 'menu');
+    };
+
+    const removeCredentialGuide = () => {
+        document.getElementById('kiwoomCredentialGuide')?.remove();
+    };
+
+    const showCredentialGuide = () => {
+        if (!shouldShowCredentialGuide() || document.getElementById('kiwoomCredentialGuide')) return;
+        const guide = document.createElement('div');
+        guide.id = 'kiwoomCredentialGuide';
+        guide.className = 'credential-guide-banner';
+        guide.setAttribute('role', 'status');
+        guide.textContent = KIWOOM_CREDENTIAL_GUIDE;
+        document.body.prepend(guide);
+    };
+
+    const refreshCredentialGuide = async (user) => {
+        removeCredentialGuide();
+        if (!user || !shouldShowCredentialGuide()) return;
+
+        try {
+            const response = await fetch('/api/integration-status', {
+                cache: 'no-store',
+                headers: {
+                    Authorization: `Bearer ${await getAccessToken()}`,
+                },
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (response.ok && !payload.kiwoomConfigured) {
+                showCredentialGuide();
+            }
+        } catch (error) {
+            console.warn('Kiwoom credential guide check failed.', error);
+        }
     };
 
     const openAuthModal = (panelName = 'login') => {
@@ -342,8 +381,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     getCurrentUser()
-        .then(updateAccountButton)
-        .catch(() => updateAccountButton(null));
+        .then((user) => {
+            updateAccountButton(user);
+            refreshCredentialGuide(user);
+        })
+        .catch(() => {
+            updateAccountButton(null);
+            removeCredentialGuide();
+        });
 });
 
 function getAuthModalMarkup() {

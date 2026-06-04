@@ -54,8 +54,8 @@ function getKiwoomConfig(credentials = null) {
     loadDotEnv();
     const fastPyKeys = loadFastPyKeys();
 
-    const appkey = process.env.KIWOOM_APPKEY || fastPyKeys.appkey;
-    const secretkey = process.env.KIWOOM_SECRETKEY || fastPyKeys.secretkey;
+    const appkey = process.env.KIWOOM_APPKEY || process.env.app_key || fastPyKeys.appkey;
+    const secretkey = process.env.KIWOOM_SECRETKEY || process.env.secret_key || fastPyKeys.secretkey;
     if (!appkey || !secretkey) {
         throw new Error('KIWOOM_APPKEY / KIWOOM_SECRETKEY가 필요합니다. .env 또는 fast.py에 키를 넣어주세요.');
     }
