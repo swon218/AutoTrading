@@ -23,6 +23,7 @@ const { getHomeRanking } = require('./backend/rankings');
 const { getStockInfo, resolveStockCode, searchStocks } = require('./backend/stocks');
 const { subscribeRealtime } = require('./backend/realtime');
 const {
+    getKiwoomCredentialsForReadRequest,
     getKiwoomCredentialsForRequest,
     getUserIntegrationStatus,
     saveUserApiCredentials,
@@ -157,7 +158,7 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && requestUrl.pathname === '/api/search') {
         try {
             const query = requestUrl.searchParams.get('q') || '';
-            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const credentials = await getKiwoomCredentialsForReadRequest(request, requestUrl);
             const results = await searchStocks(query, 10, credentials);
             sendJson(response, 200, { results });
         } catch (error) {
@@ -170,7 +171,7 @@ const server = http.createServer(async (request, response) => {
         try {
             const type = requestUrl.searchParams.get('type') || 'realtime';
             const limit = requestUrl.searchParams.get('limit') || '10';
-            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const credentials = await getKiwoomCredentialsForReadRequest(request, requestUrl);
             const ranking = await getHomeRanking(type, limit, credentials);
             sendJson(response, 200, ranking);
         } catch (error) {
@@ -203,7 +204,7 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && watchlistQuotesMatch) {
         try {
             const groupId = decodeURIComponent(watchlistQuotesMatch[1]);
-            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const credentials = await getKiwoomCredentialsForReadRequest(request, requestUrl);
             const result = await getWatchlistQuotes(request, groupId, requestUrl, credentials);
             sendJson(response, 200, result);
         } catch (error) {
@@ -465,7 +466,7 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && stockMatch) {
         try {
             const query = decodeURIComponent(stockMatch[1]);
-            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const credentials = await getKiwoomCredentialsForReadRequest(request, requestUrl);
             const code = await resolveStockCode(query, credentials);
             const stock = await getStockInfo(code, credentials);
             sendJson(response, 200, stock);
@@ -479,7 +480,7 @@ const server = http.createServer(async (request, response) => {
         try {
             const query = decodeURIComponent(chartMatch[1]);
             const interval = requestUrl.searchParams.get('interval') || '1';
-            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const credentials = await getKiwoomCredentialsForReadRequest(request, requestUrl);
             const chart = await getChartData(query, interval, credentials, {
                 years: requestUrl.searchParams.get('years'),
                 limit: requestUrl.searchParams.get('limit'),
@@ -515,7 +516,7 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET' && realtimeMatch) {
         try {
             const query = decodeURIComponent(realtimeMatch[1]);
-            const credentials = await getKiwoomCredentialsForRequest(request, requestUrl);
+            const credentials = await getKiwoomCredentialsForReadRequest(request, requestUrl);
             await subscribeRealtime(request, response, query, credentials);
         } catch (error) {
             sendJson(response, error.statusCode || 500, { message: error.message });

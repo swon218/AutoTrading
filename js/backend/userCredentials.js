@@ -25,6 +25,24 @@ function getAuthorizationToken(request, requestUrl = null) {
     return match?.[1] || requestUrl?.searchParams.get('access_token') || '';
 }
 
+function getGuestKiwoomCredentials() {
+    loadDotEnv();
+
+    const appkey = process.env.KIWOOM_APPKEY || process.env.app_key || '';
+    const secretkey = process.env.KIWOOM_SECRETKEY || process.env.secret_key || '';
+    if (!appkey || !secretkey) {
+        const error = new Error('서비스 기본 Kiwoom API 키가 설정되지 않았습니다. .env에 KIWOOM_APPKEY / KIWOOM_SECRETKEY를 추가해주세요.');
+        error.statusCode = 503;
+        throw error;
+    }
+
+    return {
+        appkey,
+        secretkey,
+        isGuest: true,
+    };
+}
+
 function getEncryptionKey(rawKey) {
     if (/^[a-f0-9]{64}$/i.test(rawKey)) {
         return Buffer.from(rawKey, 'hex');
@@ -205,7 +223,7 @@ async function getKiwoomCredentialsForRequest(request, requestUrl = null) {
     const row = await getUserApiCredentialRow(user.id, config);
 
     if (!row?.kiwoom_app_key_encrypted || !row?.kiwoom_secret_key_encrypted) {
-        const error = new Error('Kiwoom API keys are not registered. Please add them in account settings.');
+        const error = new Error('회원정보수정에서 Kiwoom API 앱키와 시크릿키를 추가 후 이용해주세요.');
         error.statusCode = 403;
         throw error;
     }
@@ -220,6 +238,15 @@ async function getKiwoomCredentialsForRequest(request, requestUrl = null) {
             ? decryptSecret(row.telegram_chat_id_encrypted, config.encryptionKey)
             : '',
     };
+}
+
+async function getKiwoomCredentialsForReadRequest(request, requestUrl = null) {
+    const accessToken = getAuthorizationToken(request, requestUrl);
+    if (!accessToken) {
+        return getGuestKiwoomCredentials();
+    }
+
+    return getKiwoomCredentialsForRequest(request, requestUrl);
 }
 
 async function getUserKiwoomCredentialsById(userId) {
@@ -259,6 +286,7 @@ module.exports = {
     getAuthenticatedSupabaseUser,
     getBackendSupabaseConfig,
     getUserIntegrationStatus,
+    getKiwoomCredentialsForReadRequest,
     getKiwoomCredentialsForRequest,
     getUserKiwoomCredentialsById,
     requestSupabaseJson,
