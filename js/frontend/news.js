@@ -13,10 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const newsSummaryList = document.querySelector('.news-summary-list');
     const newsPanelStatus = document.querySelector('.news-panel .news-panel-head span');
     const newsSummaryStatus = document.querySelector('.news-watch-panel .news-panel-head span');
+    const newsSearchForm = document.getElementById('newsSearchForm');
+    const newsSearchInput = document.getElementById('newsSearchInput');
+    const newsSearchClearButton = document.getElementById('newsSearchClearButton');
 
     let searchTimer = null;
     let currentNewsFilter = 0;
     let currentNewsPage = 1;
+    let currentNewsSearchTerm = '';
     const NEWS_ITEMS_PER_PAGE = 15;
     const NEWS_PAGE_COUNT = 5;
 
@@ -78,11 +82,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (newsPanelStatus) newsPanelStatus.textContent = updatedAt ? formatNewsTime(updatedAt) : '\uC5F0\uACB0 \uC644\uB8CC';
         if (newsSummaryStatus) newsSummaryStatus.textContent = '\uC624\uB298';
         if (!newsSummaryList) return;
+        const activeLabel = currentNewsSearchTerm
+            ? `\uAC80\uC0C9: ${currentNewsSearchTerm}`
+            : filter.label;
 
         newsSummaryList.innerHTML = `
             <div>
-                <span>\uD604\uC7AC \uD544\uD130</span>
-                <strong>${escapeHtml(filter.label)} ${escapeHtml(currentNewsPage)}\uD398\uC774\uC9C0</strong>
+                <span>${currentNewsSearchTerm ? '\uD604\uC7AC \uAC80\uC0C9\uC5B4' : '\uD604\uC7AC \uD544\uD130'}</span>
+                <strong>${escapeHtml(activeLabel)} ${escapeHtml(currentNewsPage)}\uD398\uC774\uC9C0</strong>
             </div>
             <div>
                 <span>\uD45C\uC2DC \uAE30\uC0AC</span>
@@ -128,13 +135,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadNews = async () => {
         const filter = NEWS_FILTERS[currentNewsFilter] || NEWS_FILTERS[0];
+        const query = currentNewsSearchTerm || filter.query;
         setNewsPending(true);
-        setNewsMessage('\uB124\uC774\uBC84 \uACBD\uC81C \uB274\uC2A4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911...');
+        setNewsMessage(currentNewsSearchTerm
+            ? `'${currentNewsSearchTerm}' \uB274\uC2A4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911...`
+            : '\uB124\uC774\uBC84 \uACBD\uC81C \uB274\uC2A4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911...');
         if (newsPanelStatus) newsPanelStatus.textContent = '\uC870\uD68C \uC911...';
 
         try {
             const params = new URLSearchParams({
-                q: filter.query,
+                q: query,
                 display: String(NEWS_ITEMS_PER_PAGE),
                 start: String((currentNewsPage - 1) * NEWS_ITEMS_PER_PAGE + 1),
             });
@@ -177,6 +187,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (summaryTitle) summaryTitle.textContent = '\uC694\uC57D';
         newsRefreshButton?.setAttribute('title', '\uC0C8\uB85C\uACE0\uCE68');
         newsRefreshButton?.setAttribute('aria-label', '\uB274\uC2A4 \uC0C8\uB85C\uACE0\uCE68');
+        if (newsSearchInput) newsSearchInput.placeholder = '\uB274\uC2A4 \uD0A4\uC6CC\uB4DC \uAC80\uC0C9';
+        newsSearchClearButton?.setAttribute('title', '\uAC80\uC0C9\uC5B4 \uC9C0\uC6B0\uAE30');
+        newsSearchClearButton?.setAttribute('aria-label', '\uAC80\uC0C9\uC5B4 \uC9C0\uC6B0\uAE30');
         newsTabs.forEach((button, index) => {
             const filter = NEWS_FILTERS[index] || NEWS_FILTERS[0];
             button.textContent = filter.label;
@@ -230,6 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
         searchClearButton?.classList.toggle('show', Boolean(searchBar?.value));
     };
 
+    const updateNewsSearchClearButton = () => {
+        newsSearchClearButton?.classList.toggle('hidden', !newsSearchInput?.value);
+    };
+
     sidebarToggle?.addEventListener('click', () => {
         const isCollapsed = appSidebar?.classList.toggle('is-collapsed');
         sidebarToggle.setAttribute('aria-expanded', String(!isCollapsed));
@@ -273,6 +290,9 @@ document.addEventListener('DOMContentLoaded', () => {
         button.addEventListener('click', () => {
             currentNewsFilter = index;
             currentNewsPage = 1;
+            currentNewsSearchTerm = '';
+            if (newsSearchInput) newsSearchInput.value = '';
+            updateNewsSearchClearButton();
             newsTabs.forEach((tab, tabIndex) => {
                 const isActive = tabIndex === currentNewsFilter;
                 tab.classList.toggle('is-active', isActive);
@@ -293,6 +313,28 @@ document.addEventListener('DOMContentLoaded', () => {
         loadNews();
     });
 
+    newsSearchForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const keyword = String(newsSearchInput?.value || '').trim();
+        currentNewsSearchTerm = keyword;
+        currentNewsPage = 1;
+        renderNewsPageTabs();
+        updateNewsSearchClearButton();
+        loadNews();
+    });
+
+    newsSearchInput?.addEventListener('input', updateNewsSearchClearButton);
+
+    newsSearchClearButton?.addEventListener('click', () => {
+        if (newsSearchInput) newsSearchInput.value = '';
+        currentNewsSearchTerm = '';
+        currentNewsPage = 1;
+        renderNewsPageTabs();
+        updateNewsSearchClearButton();
+        loadNews();
+        newsSearchInput?.focus();
+    });
+
     newsRefreshButton?.addEventListener('click', loadNews);
 
     document.addEventListener('click', (event) => {
@@ -303,5 +345,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initNewsShellText();
+    updateNewsSearchClearButton();
     loadNews();
 });

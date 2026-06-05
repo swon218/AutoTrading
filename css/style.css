@@ -2110,6 +2110,14 @@ body.overflow-hidden {
     font-size: 0.78rem;
 }
 
+.news-control-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
 .news-filter-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -2133,6 +2141,58 @@ body.overflow-hidden {
     border-color: #34d399;
     background-color: #064e3b;
     color: #ffffff;
+}
+
+.news-search-form {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: min(100%, 20rem);
+    height: 2.25rem;
+    border: 1px solid #334155;
+    border-radius: 0.45rem;
+    background-color: #1e293b;
+    padding: 0 0.35rem 0 0.75rem;
+}
+
+.news-search-form:focus-within {
+    border-color: #34d399;
+}
+
+.news-search-form input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #f8fafc;
+    font-size: 0.84rem;
+}
+
+.news-search-form input::placeholder {
+    color: #94a3b8;
+}
+
+.news-search-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 0;
+    border-radius: 0.35rem;
+    background-color: transparent;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+.news-search-icon-button:hover {
+    background-color: #334155;
+    color: #ffffff;
+}
+
+.news-search-icon-button.hidden {
+    display: none;
 }
 
 .news-content-grid {
