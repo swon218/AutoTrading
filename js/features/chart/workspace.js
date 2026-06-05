@@ -217,11 +217,18 @@ export function initChartWorkspace() {
     let holdingRequestId = 0;
     let indicatorHelpModal = null;
     let isGuestSession = true;
+    let isSessionModeResolved = false;
+    let sessionModePromise = null;
 
     const GUEST_TRADING_MESSAGE = '로그인하지 않은 상태에서는 차트 조회와 보조지표 추가만 이용할 수 있습니다.';
     const LOGIN_REQUIRED_MESSAGE = `${GUEST_TRADING_MESSAGE} 주문, 자동매매, 지표 저장은 로그인 후 이용해주세요.`;
 
     const isGuestTradingMode = () => isGuestSession && !isStaticStrategyChart;
+
+    const waitForSessionMode = async () => {
+        if (isSessionModeResolved || !sessionModePromise) return;
+        await sessionModePromise;
+    };
 
     const isIndicatorActive = (key) => {
         return activeIndicators.some((indicator) => indicator.key === key);
@@ -604,16 +611,22 @@ export function initChartWorkspace() {
         setAutoTradeMessage(LOGIN_REQUIRED_MESSAGE, 'error');
     };
 
-    getClientSessionMode()
+    sessionModePromise = getClientSessionMode()
         .then((mode) => {
             isGuestSession = mode.isGuest;
+            isSessionModeResolved = true;
             applyGuestTradingRestrictions();
             updateOrderSubmitLabel();
             updateAutoTradeSubmitState();
+            if (!isGuestTradingMode() && !orderPanel?.classList.contains('hidden')) {
+                if (currentOrderAction === 'buy') fetchOrderableCash();
+                if (currentOrderAction === 'sell') fetchStockHolding();
+            }
         })
         .catch((error) => {
             console.warn('Session mode check failed.', error);
             isGuestSession = true;
+            isSessionModeResolved = true;
             applyGuestTradingRestrictions();
         });
 
@@ -833,6 +846,14 @@ export function initChartWorkspace() {
 
     const fetchOrderableCash = async () => {
         if (!orderAvailableAmount) return;
+        if (!isSessionModeResolved) {
+            setOrderableCashText('\uC870\uD68C \uC911...');
+            try {
+                await waitForSessionMode();
+            } catch (error) {
+                console.warn('Session mode wait failed.', error);
+            }
+        }
         if (isGuestTradingMode()) {
             setOrderableCashText('로그인 필요', true);
             return;

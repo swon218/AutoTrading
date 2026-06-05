@@ -49,6 +49,7 @@ const {
     getWatchlists,
     updateWatchlist,
 } = require('./backend/watchlists');
+const { getEconomicNews } = require('./backend/news');
 
 const PORT = Number(process.env.PORT || 3000);
 
@@ -174,6 +175,18 @@ const server = http.createServer(async (request, response) => {
             const credentials = await getKiwoomCredentialsForReadRequest(request, requestUrl);
             const ranking = await getHomeRanking(type, limit, credentials);
             sendJson(response, 200, ranking);
+        } catch (error) {
+            sendJson(response, error.statusCode || 500, { message: error.message });
+        }
+        return;
+    }
+
+    if (request.method === 'GET' && requestUrl.pathname === '/api/news') {
+        try {
+            const query = requestUrl.searchParams.get('q') || '경제';
+            const display = requestUrl.searchParams.get('display') || '12';
+            const news = await getEconomicNews({ query, display });
+            sendJson(response, 200, news);
         } catch (error) {
             sendJson(response, error.statusCode || 500, { message: error.message });
         }

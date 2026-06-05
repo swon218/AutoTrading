@@ -2186,7 +2186,15 @@ body.overflow-hidden {
 }
 
 .news-item {
+    display: block;
     padding: 1rem;
+    text-decoration: none;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.news-item:hover {
+    border-color: #34d399;
+    background-color: #2b3a50;
 }
 
 .news-item-meta {
