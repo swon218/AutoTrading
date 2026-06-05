@@ -1,8 +1,9 @@
 const { loadDotEnv } = require('./env');
 
 const NAVER_NEWS_ENDPOINT = 'https://openapi.naver.com/v1/search/news.json';
-const DEFAULT_DISPLAY = 12;
+const DEFAULT_DISPLAY = 15;
 const MAX_DISPLAY = 30;
+const MAX_START = 1000;
 
 function getNaverCredentials() {
     loadDotEnv();
@@ -54,16 +55,20 @@ function normalizeNewsItem(item = {}) {
 
 async function getEconomicNews(options = {}) {
     const { clientId, clientSecret } = getNaverCredentials();
-    const query = String(options.query || '경제').trim() || '경제';
+    const query = String(options.query || '\uACBD\uC81C').trim() || '\uACBD\uC81C';
     const display = Math.min(
         MAX_DISPLAY,
         Math.max(1, Number.parseInt(options.display, 10) || DEFAULT_DISPLAY),
+    );
+    const start = Math.min(
+        MAX_START,
+        Math.max(1, Number.parseInt(options.start, 10) || 1),
     );
 
     const params = new URLSearchParams({
         query,
         display: String(display),
-        start: '1',
+        start: String(start),
         sort: 'date',
     });
 
@@ -83,6 +88,8 @@ async function getEconomicNews(options = {}) {
 
     return {
         query,
+        start,
+        display,
         total: Number(payload.total) || 0,
         lastBuildDate: payload.lastBuildDate || '',
         items: Array.isArray(payload.items)

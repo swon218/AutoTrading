@@ -183,9 +183,10 @@ const server = http.createServer(async (request, response) => {
 
     if (request.method === 'GET' && requestUrl.pathname === '/api/news') {
         try {
-            const query = requestUrl.searchParams.get('q') || '경제';
-            const display = requestUrl.searchParams.get('display') || '12';
-            const news = await getEconomicNews({ query, display });
+            const query = requestUrl.searchParams.get('q') || '\uACBD\uC81C';
+            const display = requestUrl.searchParams.get('display') || '15';
+            const start = requestUrl.searchParams.get('start') || '1';
+            const news = await getEconomicNews({ query, display, start });
             sendJson(response, 200, news);
         } catch (error) {
             sendJson(response, error.statusCode || 500, { message: error.message });

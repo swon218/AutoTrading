@@ -16,6 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let searchTimer = null;
     let currentNewsFilter = 0;
+    let currentNewsPage = 1;
+    const NEWS_ITEMS_PER_PAGE = 15;
+    const NEWS_PAGE_COUNT = 5;
 
     const NEWS_FILTERS = [
         { label: '\uC804\uCCB4', query: '\uACBD\uC81C \uC99D\uC2DC' },
@@ -23,6 +26,11 @@ document.addEventListener('DOMContentLoaded', () => {
         { label: '\uC885\uBAA9', query: '\uC0C1\uC7A5\uC0AC \uAE30\uC5C5 \uC2E4\uC801' },
         { label: '\uACF5\uC2DC', query: '\uACF5\uC2DC \uD22C\uC790' },
     ];
+
+    const newsPageTabs = document.createElement('div');
+    newsPageTabs.className = 'news-page-tabs';
+    newsPageTabs.setAttribute('role', 'tablist');
+    newsPageTabs.setAttribute('aria-label', '\uB274\uC2A4 \uD398\uC774\uC9C0');
 
     const escapeHtml = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -74,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         newsSummaryList.innerHTML = `
             <div>
                 <span>\uD604\uC7AC \uD544\uD130</span>
-                <strong>${escapeHtml(filter.label)}</strong>
+                <strong>${escapeHtml(filter.label)} ${escapeHtml(currentNewsPage)}\uD398\uC774\uC9C0</strong>
             </div>
             <div>
                 <span>\uD45C\uC2DC \uAE30\uC0AC</span>
@@ -85,6 +93,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <strong>${escapeHtml(total)}\uAC74</strong>
             </div>
         `;
+    };
+
+    const renderNewsPageTabs = () => {
+        newsPageTabs.innerHTML = Array.from({ length: NEWS_PAGE_COUNT }, (_, index) => {
+            const page = index + 1;
+            const isActive = page === currentNewsPage;
+            return `
+                <button class="news-page-tab${isActive ? ' is-active' : ''}" type="button" data-news-page="${page}" aria-selected="${String(isActive)}">
+                    ${page}
+                </button>
+            `;
+        }).join('');
     };
 
     const renderNewsItems = (items = []) => {
@@ -115,13 +135,15 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const params = new URLSearchParams({
                 q: filter.query,
-                display: '12',
+                display: String(NEWS_ITEMS_PER_PAGE),
+                start: String((currentNewsPage - 1) * NEWS_ITEMS_PER_PAGE + 1),
             });
             const response = await authFetch(`/api/news?${params.toString()}`, { cache: 'no-store' });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.message || `HTTP ${response.status}`);
 
             renderNewsItems(payload.items || []);
+            if (newsList) newsList.scrollTop = 0;
             renderNewsSummary({
                 filter,
                 count: (payload.items || []).length,
@@ -161,6 +183,8 @@ document.addEventListener('DOMContentLoaded', () => {
             button.setAttribute('role', 'tab');
             button.setAttribute('aria-selected', String(index === currentNewsFilter));
         });
+        renderNewsPageTabs();
+        newsList?.insertAdjacentElement('afterend', newsPageTabs);
     };
 
     const renderSearchResults = (results = []) => {
@@ -248,13 +272,25 @@ document.addEventListener('DOMContentLoaded', () => {
     newsTabs.forEach((button, index) => {
         button.addEventListener('click', () => {
             currentNewsFilter = index;
+            currentNewsPage = 1;
             newsTabs.forEach((tab, tabIndex) => {
                 const isActive = tabIndex === currentNewsFilter;
                 tab.classList.toggle('is-active', isActive);
                 tab.setAttribute('aria-selected', String(isActive));
             });
+            renderNewsPageTabs();
             loadNews();
         });
+    });
+
+    newsPageTabs.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-news-page]');
+        if (!button) return;
+        const page = Number.parseInt(button.dataset.newsPage, 10);
+        if (!page || page === currentNewsPage) return;
+        currentNewsPage = page;
+        renderNewsPageTabs();
+        loadNews();
     });
 
     newsRefreshButton?.addEventListener('click', loadNews);
