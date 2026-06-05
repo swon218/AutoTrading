@@ -328,10 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     newsSearchClearButton?.addEventListener('click', () => {
         if (newsSearchInput) newsSearchInput.value = '';
         currentNewsSearchTerm = '';
-        currentNewsPage = 1;
-        renderNewsPageTabs();
         updateNewsSearchClearButton();
-        loadNews();
         newsSearchInput?.focus();
     });
 

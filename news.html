@@ -153,21 +153,21 @@
                         <button class="news-filter-tab" type="button">종목</button>
                         <button class="news-filter-tab" type="button">공시</button>
                     </div>
-                    <form id="newsSearchForm" class="news-search-form" role="search">
-                        <input id="newsSearchInput" type="search" autocomplete="off" placeholder="뉴스 키워드 검색">
-                        <button id="newsSearchClearButton" class="news-search-icon-button hidden" type="button" title="검색어 지우기" aria-label="검색어 지우기">
-                            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-                        </button>
-                        <button class="news-search-icon-button" type="submit" title="뉴스 검색" aria-label="뉴스 검색">
-                            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
-                        </button>
-                    </form>
                 </div>
 
                 <div class="news-content-grid">
                     <section class="news-panel" aria-label="주요 뉴스">
                         <div class="news-panel-head">
                             <h2>주요 뉴스</h2>
+                            <form id="newsSearchForm" class="news-search-form" role="search">
+                                <input id="newsSearchInput" type="text" autocomplete="off" placeholder="뉴스 키워드 검색">
+                                <button id="newsSearchClearButton" class="news-search-icon-button hidden" type="button" title="검색어 지우기" aria-label="검색어 지우기">
+                                    <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+                                </button>
+                                <button class="news-search-icon-button" type="submit" title="뉴스 검색" aria-label="뉴스 검색">
+                                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                                </button>
+                            </form>
                             <span>연결 대기</span>
                         </div>
                         <div class="news-list">

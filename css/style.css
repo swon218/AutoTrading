@@ -2114,7 +2114,6 @@ body.overflow-hidden {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    justify-content: space-between;
     gap: 0.5rem;
 }
 
@@ -2147,7 +2146,7 @@ body.overflow-hidden {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    min-width: min(100%, 20rem);
+    width: min(100%, 20rem);
     height: 2.25rem;
     border: 1px solid #334155;
     border-radius: 0.45rem;
@@ -2219,7 +2218,7 @@ body.overflow-hidden {
 .news-panel-head {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 1rem;
     min-height: 3.1rem;
     border-bottom: 1px solid #334155;
     padding: 0 1rem;
@@ -2233,8 +2232,13 @@ body.overflow-hidden {
 }
 
 .news-panel-head span {
+    margin-left: auto;
     color: #b6c3d1;
     font-size: 0.78rem;
+}
+
+.news-panel-head .news-search-form {
+    flex: 0 1 20rem;
 }
 
 .news-list,
